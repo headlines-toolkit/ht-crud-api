@@ -1,3 +1,6 @@
+//
+// ignore_for_file: avoid_print, lines_longer_than_80_chars
+
 import 'package:ht_http_client/ht_http_client.dart';
 
 /// A function that converts a JSON map to an object of type [T].
@@ -97,18 +100,16 @@ class CrudApi<T> {
         _endpointPath,
       );
 
-      return responseData
-          .map((item) {
-            if (item is Map<String, dynamic>) {
-              return _fromJson(item);
-            } else {
-              // Throw a specific error if item type is wrong
-              throw FormatException(
-                'Expected a Map<String, dynamic> in list but got ${item.runtimeType}',
-              );
-            }
-          })
-          .toList();
+      return responseData.map((item) {
+        if (item is Map<String, dynamic>) {
+          return _fromJson(item);
+        } else {
+          // Throw a specific error if item type is wrong
+          throw FormatException(
+            'Expected a Map<String, dynamic> in list but got ${item.runtimeType}',
+          );
+        }
+      }).toList();
     } on HtHttpException {
       rethrow;
     } on FormatException {
