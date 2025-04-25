@@ -2,4 +2,4 @@
 library;
 
 // Export the main CrudApi class and its helper typedefs
-export 'src/ht_crud_api.dart' show CrudApi, FromJson, ToJson;
+export 'src/ht_crud_api.dart' show CrudApi;
