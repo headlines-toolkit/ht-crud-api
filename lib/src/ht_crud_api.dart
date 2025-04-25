@@ -33,7 +33,7 @@ class CrudApi<T> implements HtCrudClient<T> {
 
   /// Creates a new resource item of type [T].
   ///
-  /// Sends a POST request to the base [_endpointPath] with the serialized [item].
+  /// Sends POST request to the base [_endpointPath] with the serialized [item].
   /// Returns the created item, potentially populated with server-assigned data.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
