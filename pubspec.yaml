@@ -7,6 +7,9 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
+  ht_crud_client:
+    git:
+      url: https://github.com/headlines-toolkit/ht-crud-client.git
   ht_http_client:
     git:
       url: https://github.com/headlines-toolkit/ht-http-client.git
