@@ -268,41 +268,101 @@ void main() {
 
     // --- ReadAll Tests ---
     group('readAll', () {
-      void stubGetAllSuccess({List<dynamic> response = const []}) {
+      // Updated helper to accept queryParameters
+      void stubGetAllSuccess({
+        List<dynamic> response = const [],
+        Map<String, dynamic>? queryParameters,
+      }) {
         when(
-          () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: queryParameters ?? {}, // Pass query params
+          ),
         ).thenAnswer((_) async => response);
       }
 
-      void stubGetAllFailure(Exception exception) {
+      // Updated helper to accept queryParameters
+      void stubGetAllFailure({
+        required Exception exception,
+        Map<String, dynamic>? queryParameters,
+      }) {
         when(
-          () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: queryParameters ?? {}, // Pass query params
+          ),
         ).thenThrow(exception);
       }
 
       test(
-          'should call httpClient.get and return list of deserialized models '
+          'should call httpClient.get with empty query and return list '
           'on success', () async {
-        stubGetAllSuccess(response: testModelListJson);
+        // Verify empty query map is passed by default
+        stubGetAllSuccess(
+          response: testModelListJson,
+          queryParameters: {},
+        );
         final result = await crudApi.readAll();
         expect(result, equals(testModelList));
-        verify(() => mockHttpClient.get<List<dynamic>>(testEndpoint)).called(1);
+        verify(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: {}, // Expect empty map
+          ),
+        ).called(1);
+      });
+
+      // New test for pagination parameters
+      test(
+          'should call httpClient.get with pagination query and return list '
+          'on success', () async {
+        const startAfterId = 'item-100';
+        const limit = 10;
+        final queryParams = {'startAfterId': startAfterId, 'limit': limit};
+        stubGetAllSuccess(
+          response: testModelListJson,
+          queryParameters: queryParams,
+        );
+        final result = await crudApi.readAll(
+          startAfterId: startAfterId,
+          limit: limit,
+        );
+        expect(result, equals(testModelList));
+        verify(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: queryParams, // Expect pagination params
+          ),
+        ).called(1);
       });
 
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = ServerException('Server error');
-        stubGetAllFailure(exception);
+        // Verify empty query map is passed by default on failure too
+        stubGetAllFailure(exception: exception, queryParameters: {});
         expect(() => crudApi.readAll(), throwsA(isA<ServerException>()));
-        verify(() => mockHttpClient.get<List<dynamic>>(testEndpoint)).called(1);
+        verify(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: {}, // Expect empty map
+          ),
+        ).called(1);
       });
 
       test(
         'should throw FormatException when list item is not a Map',
         () async {
-          stubGetAllSuccess(response: [testModelJson, 123]); // Invalid item
+          // Verify empty query map is passed by default
+          stubGetAllSuccess(
+            response: [testModelJson, 123], // Invalid item
+            queryParameters: {},
+          );
           expect(() => crudApi.readAll(), throwsA(isA<FormatException>()));
           verify(
-            () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+            () => mockHttpClient.get<List<dynamic>>(
+              testEndpoint,
+              queryParameters: {}, // Expect empty map
+            ),
           ).called(1);
         },
       );
@@ -310,7 +370,11 @@ void main() {
       test(
         'should throw generic Exception when fromJson fails during mapping',
         () async {
-          stubGetAllSuccess(response: testModelListJson); // Valid list from API
+          // Verify empty query map is passed by default
+          stubGetAllSuccess(
+            response: testModelListJson, // Valid list from API
+            queryParameters: {},
+          );
           expect(
             () => crudApiFromJsonThrows.readAll(),
             throwsA(
@@ -322,7 +386,10 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+            () => mockHttpClient.get<List<dynamic>>(
+              testEndpoint,
+              queryParameters: {}, // Expect empty map
+            ),
           ).called(1);
         },
       );
@@ -331,7 +398,8 @@ void main() {
         'should throw generic Exception when httpClient throws generic error',
         () async {
           final exception = genericException;
-          stubGetAllFailure(exception);
+          // Verify empty query map is passed by default on failure too
+          stubGetAllFailure(exception: exception, queryParameters: {});
           expect(
             () => crudApi.readAll(),
             throwsA(
@@ -343,7 +411,177 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+            () => mockHttpClient.get<List<dynamic>>(
+              testEndpoint,
+              queryParameters: {}, // Expect empty map
+            ),
+          ).called(1);
+        },
+      );
+    });
+
+    // --- ReadAllByQuery Tests ---
+    group('readAllByQuery', () {
+      final testQuery = {'category': 'test', 'active': true};
+      const testStartAfterId = 'item-200';
+      const testLimit = 5;
+      final testQueryWithPagination = {
+        ...testQuery,
+        'startAfterId': testStartAfterId,
+        'limit': testLimit,
+      };
+
+      // Helper for successful query
+      void stubGetByQuerySuccess({
+        required Map<String, dynamic> queryParameters,
+        List<dynamic> response = const [],
+      }) {
+        when(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: queryParameters,
+          ),
+        ).thenAnswer((_) async => response);
+      }
+
+      // Helper for failed query
+      void stubGetByQueryFailure({
+        required Exception exception,
+        required Map<String, dynamic> queryParameters,
+      }) {
+        when(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: queryParameters,
+          ),
+        ).thenThrow(exception);
+      }
+
+      test(
+          'should call httpClient.get with query and return list '
+          'on success', () async {
+        stubGetByQuerySuccess(
+          response: testModelListJson,
+          queryParameters: testQuery,
+        );
+        final result = await crudApi.readAllByQuery(testQuery);
+        expect(result, equals(testModelList));
+        verify(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: testQuery,
+          ),
+        ).called(1);
+      });
+
+      test(
+          'should call httpClient.get with query and pagination and return list '
+          'on success', () async {
+        stubGetByQuerySuccess(
+          response: testModelListJson,
+          queryParameters: testQueryWithPagination,
+        );
+        final result = await crudApi.readAllByQuery(
+          testQuery,
+          startAfterId: testStartAfterId,
+          limit: testLimit,
+        );
+        expect(result, equals(testModelList));
+        verify(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: testQueryWithPagination,
+          ),
+        ).called(1);
+      });
+
+      test('should throw HtHttpException when httpClient.get fails', () async {
+        const exception = ServerException('Server error');
+        stubGetByQueryFailure(
+          exception: exception,
+          queryParameters: testQuery,
+        );
+        expect(
+          () => crudApi.readAllByQuery(testQuery),
+          throwsA(isA<ServerException>()),
+        );
+        verify(
+          () => mockHttpClient.get<List<dynamic>>(
+            testEndpoint,
+            queryParameters: testQuery,
+          ),
+        ).called(1);
+      });
+
+      test(
+        'should throw FormatException when list item is not a Map',
+        () async {
+          stubGetByQuerySuccess(
+            response: [testModelJson, 123], // Invalid item
+            queryParameters: testQuery,
+          );
+          expect(
+            () => crudApi.readAllByQuery(testQuery),
+            throwsA(isA<FormatException>()),
+          );
+          verify(
+            () => mockHttpClient.get<List<dynamic>>(
+              testEndpoint,
+              queryParameters: testQuery,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'should throw generic Exception when fromJson fails during mapping',
+        () async {
+          stubGetByQuerySuccess(
+            response: testModelListJson, // Valid list from API
+            queryParameters: testQuery,
+          );
+          expect(
+            () => crudApiFromJsonThrows.readAllByQuery(testQuery),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: fromJson failed',
+              ),
+            ),
+          );
+          verify(
+            () => mockHttpClient.get<List<dynamic>>(
+              testEndpoint,
+              queryParameters: testQuery,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'should throw generic Exception when httpClient throws generic error',
+        () async {
+          final exception = genericException;
+          stubGetByQueryFailure(
+            exception: exception,
+            queryParameters: testQuery,
+          );
+          expect(
+            () => crudApi.readAllByQuery(testQuery),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
+            ),
+          );
+          verify(
+            () => mockHttpClient.get<List<dynamic>>(
+              testEndpoint,
+              queryParameters: testQuery,
+            ),
           ).called(1);
         },
       );
