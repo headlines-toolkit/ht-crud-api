@@ -1,6 +1,6 @@
 name: ht_data_api
-description: A generic Dart package providing a reusable CrudApi class for interacting with RESTful endpoints via ht_http_client.
-repository: https://github.com/headlines-toolkit/ht-crud-api
+description: A generic Dart package providing an implementation of HtDataClient for interacting with data resource endpoints via ht_http_client.
+repository: https://github.com/headlines-toolkit/ht-data-api
 publish_to: none
 
 environment:
