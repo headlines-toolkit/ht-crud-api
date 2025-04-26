@@ -110,8 +110,10 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads multiple resource items of type [T] based on a [query].
   ///
-  /// Sends a GET request to the base [_endpointPath] with the provided
-  /// [query] parameters and optional pagination parameters ([startAfterId], [limit]).
+  /// Sends a GET request to the base [_endpointPath] with the
+  /// provided [query] parameters and optional pagination
+  /// parameters ([startAfterId], [limit]).
+  ///
   /// Returns a list of deserialized items matching the query.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
