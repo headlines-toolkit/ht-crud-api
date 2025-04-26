@@ -4,7 +4,7 @@
 [![style: very good analysis](https://img.shields.io/badge/style-very_good_analysis-B22C89.svg)](https://pub.dev/packages/very_good_analysis)
 [![License: PolyForm Free Trial](https://img.shields.io/badge/License-PolyForm%20Free%20Trial-blue)](https://polyformproject.org/licenses/free-trial/1.0.0)
 
-A generic Dart package providing a reusable `CrudApi<T>` class for interacting with standard RESTful CRUD endpoints. It leverages the `ht_http_client` package for underlying HTTP communication and error handling.
+A generic Dart package providing a concrete implementation of the `HtDataClient<T>` abstract class for interacting with data resource endpoints via HTTP. It leverages the `ht_http_client` package for underlying HTTP communication and error handling.
 
 ## Getting Started
 
@@ -14,7 +14,7 @@ Add this package to your `pubspec.yaml` dependencies:
 dependencies:
   ht_data_api:
     git:
-      url: https://github.com/headlines-toolkit/ht-crud-api.git
+      url: https://github.com/headlines-toolkit/ht-data-api.git
       # ref: <specific_tag_or_commit> # Optional: Pin to a specific version
   ht_http_client:
     git:
@@ -26,8 +26,8 @@ Then run `dart pub get` or `flutter pub get`.
 
 ## Features
 
-*   Provides a generic `CrudApi<T>` class for type-safe CRUD operations.
-*   Implements standard methods: `create`, `read`, `readAll`, `update`, `delete`.
+*   Provides a concrete implementation of the `HtDataClient<T>` abstract class.
+*   Implements data access methods: `create`, `read`, `readAll` (with pagination), `readAllByQuery` (with query parameters and pagination), `update`, `delete`.
 *   Requires an instance of `HtHttpClient` for making HTTP requests.
 *   Configurable with endpoint path and `fromJson`/`toJson` functions for the specific model `T`.
 *   Propagates `HtHttpException` errors from the underlying `HtHttpClient`.
@@ -74,10 +74,10 @@ Then run `dart pub get` or `flutter pub get`.
     );
     ```
 
-3.  **Instantiate `CrudApi`:** Create an instance specific to your model and endpoint.
+3.  **Instantiate `HtDataApi`:** Create an instance specific to your model and endpoint.
 
     ```dart
-    final myModelApi = CrudApi<MyModel>(
+    final myModelApi = HtDataApi<MyModel>(
       httpClient: httpClient,
       endpointPath: '/my-models', // Your specific API path
       fromJson: MyModel.fromJson, // Reference to your fromJson factory/function
@@ -97,6 +97,16 @@ Then run `dart pub get` or `flutter pub get`.
       // Read All
       final allModels = await myModelApi.readAll();
       print('Found ${allModels.length} models.');
+
+      // Read All by Query
+      final queryResults = await myModelApi.readAllByQuery({
+        'name': 'New Item',
+        'limit': 1,
+      });
+      print('Found ${queryResults.length} models matching query.');
+      if (queryResults.isNotEmpty) {
+        print('First query result: ${queryResults.first.name}');
+      }
 
       // Read One
       if (allModels.isNotEmpty) {
