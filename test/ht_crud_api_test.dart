@@ -1,7 +1,7 @@
 //
 // ignore_for_file: inference_failure_on_collection_literal, inference_failure_on_function_invocation, lines_longer_than_80_chars, prefer_constructors_over_static_methods, avoid_equals_and_hash_code_on_mutable_classes
 
-import 'package:ht_crud_api/ht_crud_api.dart';
+import 'package:ht_data_api/ht_data_api.dart';
 import 'package:ht_http_client/ht_http_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -28,17 +28,11 @@ class _TestModel {
         'Missing required fields in JSON for _TestModel',
       );
     }
-    return _TestModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-    );
+    return _TestModel(id: json['id'] as String, name: json['name'] as String);
   }
 
   static Map<String, dynamic> toJson(_TestModel item) {
-    return {
-      'id': item.id,
-      'name': item.name,
-    };
+    return {'id': item.id, 'name': item.name};
   }
 
   @override
@@ -66,9 +60,9 @@ void main() {
 
   group('CrudApi', () {
     late HtHttpClient mockHttpClient;
-    late CrudApi<_TestModel> crudApi;
-    late CrudApi<_TestModel> crudApiFromJsonThrows;
-    late CrudApi<_TestModel> crudApiToJsonThrows;
+    late HtDataApi<_TestModel> crudApi;
+    late HtDataApi<_TestModel> crudApiFromJsonThrows;
+    late HtDataApi<_TestModel> crudApiToJsonThrows;
 
     const testEndpoint = '/test-items';
     const testId = 'item-123';
@@ -80,19 +74,19 @@ void main() {
 
     setUp(() {
       mockHttpClient = MockHtHttpClient();
-      crudApi = CrudApi<_TestModel>(
+      crudApi = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
         endpointPath: testEndpoint,
         fromJson: _TestModel.fromJson,
         toJson: _TestModel.toJson,
       );
-      crudApiFromJsonThrows = CrudApi<_TestModel>(
+      crudApiFromJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
         endpointPath: testEndpoint,
         fromJson: _mockFromJsonThrows,
         toJson: _TestModel.toJson,
       );
-      crudApiToJsonThrows = CrudApi<_TestModel>(
+      crudApiToJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
         endpointPath: testEndpoint,
         fromJson: _TestModel.fromJson,
@@ -123,18 +117,19 @@ void main() {
       }
 
       test(
-          'should call httpClient.post and return deserialized model on success',
-          () async {
-        stubPostSuccess();
-        final result = await crudApi.create(testModel);
-        expect(result, equals(testModel));
-        verify(
-          () => mockHttpClient.post<Map<String, dynamic>>(
-            testEndpoint,
-            data: testModelJson,
-          ),
-        ).called(1);
-      });
+        'should call httpClient.post and return deserialized model on success',
+        () async {
+          stubPostSuccess();
+          final result = await crudApi.create(testModel);
+          expect(result, equals(testModel));
+          verify(
+            () => mockHttpClient.post<Map<String, dynamic>>(
+              testEndpoint,
+              data: testModelJson,
+            ),
+          ).called(1);
+        },
+      );
 
       test('should throw HtHttpException when httpClient.post fails', () async {
         const exception = BadRequestException('Invalid data');
@@ -173,27 +168,29 @@ void main() {
       });
 
       // New test: generic exception from http client
-      test('should throw generic Exception when httpClient.post throws generic',
-          () async {
-        final exception = genericException;
-        stubPostFailure(exception); // Stub with generic exception
-        expect(
-          () => crudApi.create(testModel),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: Something unexpected happened',
+      test(
+        'should throw generic Exception when httpClient.post throws generic',
+        () async {
+          final exception = genericException;
+          stubPostFailure(exception); // Stub with generic exception
+          expect(
+            () => crudApi.create(testModel),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
             ),
-          ),
-        );
-        verify(
-          () => mockHttpClient.post<Map<String, dynamic>>(
-            testEndpoint,
-            data: testModelJson,
-          ),
-        ).called(1);
-      });
+          );
+          verify(
+            () => mockHttpClient.post<Map<String, dynamic>>(
+              testEndpoint,
+              data: testModelJson,
+            ),
+          ).called(1);
+        },
+      );
     });
 
     // --- Read Tests ---
@@ -201,31 +198,33 @@ void main() {
       const path = '$testEndpoint/$testId';
 
       void stubGetSuccess() {
-        when(() => mockHttpClient.get<Map<String, dynamic>>(path))
-            .thenAnswer((_) async => testModelJson);
+        when(
+          () => mockHttpClient.get<Map<String, dynamic>>(path),
+        ).thenAnswer((_) async => testModelJson);
       }
 
       void stubGetFailure(Exception exception) {
-        when(() => mockHttpClient.get<Map<String, dynamic>>(path))
-            .thenThrow(exception);
+        when(
+          () => mockHttpClient.get<Map<String, dynamic>>(path),
+        ).thenThrow(exception);
       }
 
       test(
-          'should call httpClient.get and return deserialized model on success',
-          () async {
-        stubGetSuccess();
-        final result = await crudApi.read(testId);
-        expect(result, equals(testModel));
-        verify(() => mockHttpClient.get<Map<String, dynamic>>(path)).called(1);
-      });
+        'should call httpClient.get and return deserialized model on success',
+        () async {
+          stubGetSuccess();
+          final result = await crudApi.read(testId);
+          expect(result, equals(testModel));
+          verify(
+            () => mockHttpClient.get<Map<String, dynamic>>(path),
+          ).called(1);
+        },
+      );
 
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = NotFoundException('Item not found');
         stubGetFailure(exception);
-        expect(
-          () => crudApi.read(testId),
-          throwsA(isA<NotFoundException>()),
-        );
+        expect(() => crudApi.read(testId), throwsA(isA<NotFoundException>()));
         verify(() => mockHttpClient.get<Map<String, dynamic>>(path)).called(1);
       });
 
@@ -245,34 +244,40 @@ void main() {
       });
 
       // New test: generic exception from http client
-      test('should throw generic Exception when httpClient.get throws generic',
-          () async {
-        final exception = genericException;
-        stubGetFailure(exception); // Stub with generic exception
-        expect(
-          () => crudApi.read(testId),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: Something unexpected happened',
+      test(
+        'should throw generic Exception when httpClient.get throws generic',
+        () async {
+          final exception = genericException;
+          stubGetFailure(exception); // Stub with generic exception
+          expect(
+            () => crudApi.read(testId),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
             ),
-          ),
-        );
-        verify(() => mockHttpClient.get<Map<String, dynamic>>(path)).called(1);
-      });
+          );
+          verify(
+            () => mockHttpClient.get<Map<String, dynamic>>(path),
+          ).called(1);
+        },
+      );
     });
 
     // --- ReadAll Tests ---
     group('readAll', () {
       void stubGetAllSuccess({List<dynamic> response = const []}) {
-        when(() => mockHttpClient.get<List<dynamic>>(testEndpoint))
-            .thenAnswer((_) async => response);
+        when(
+          () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+        ).thenAnswer((_) async => response);
       }
 
       void stubGetAllFailure(Exception exception) {
-        when(() => mockHttpClient.get<List<dynamic>>(testEndpoint))
-            .thenThrow(exception);
+        when(
+          () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+        ).thenThrow(exception);
       }
 
       test(
@@ -287,56 +292,61 @@ void main() {
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = ServerException('Server error');
         stubGetAllFailure(exception);
-        expect(
-          () => crudApi.readAll(),
-          throwsA(isA<ServerException>()),
-        );
-        verify(() => mockHttpClient.get<List<dynamic>>(testEndpoint)).called(1);
-      });
-
-      test('should throw FormatException when list item is not a Map',
-          () async {
-        stubGetAllSuccess(response: [testModelJson, 123]); // Invalid item
-        expect(
-          () => crudApi.readAll(),
-          throwsA(isA<FormatException>()),
-        );
-        verify(() => mockHttpClient.get<List<dynamic>>(testEndpoint)).called(1);
-      });
-
-      test('should throw generic Exception when fromJson fails during mapping',
-          () async {
-        stubGetAllSuccess(response: testModelListJson); // Valid list from API
-        expect(
-          () => crudApiFromJsonThrows.readAll(),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: fromJson failed',
-            ),
-          ),
-        );
+        expect(() => crudApi.readAll(), throwsA(isA<ServerException>()));
         verify(() => mockHttpClient.get<List<dynamic>>(testEndpoint)).called(1);
       });
 
       test(
-          'should throw generic Exception when httpClient throws generic error',
-          () async {
-        final exception = genericException;
-        stubGetAllFailure(exception);
-        expect(
-          () => crudApi.readAll(),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: Something unexpected happened',
+        'should throw FormatException when list item is not a Map',
+        () async {
+          stubGetAllSuccess(response: [testModelJson, 123]); // Invalid item
+          expect(() => crudApi.readAll(), throwsA(isA<FormatException>()));
+          verify(
+            () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+          ).called(1);
+        },
+      );
+
+      test(
+        'should throw generic Exception when fromJson fails during mapping',
+        () async {
+          stubGetAllSuccess(response: testModelListJson); // Valid list from API
+          expect(
+            () => crudApiFromJsonThrows.readAll(),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: fromJson failed',
+              ),
             ),
-          ),
-        );
-        verify(() => mockHttpClient.get<List<dynamic>>(testEndpoint)).called(1);
-      });
+          );
+          verify(
+            () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+          ).called(1);
+        },
+      );
+
+      test(
+        'should throw generic Exception when httpClient throws generic error',
+        () async {
+          final exception = genericException;
+          stubGetAllFailure(exception);
+          expect(
+            () => crudApi.readAll(),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
+            ),
+          );
+          verify(
+            () => mockHttpClient.get<List<dynamic>>(testEndpoint),
+          ).called(1);
+        },
+      );
     });
 
     // --- Update Tests ---
@@ -355,18 +365,19 @@ void main() {
       }
 
       test(
-          'should call httpClient.put and return deserialized model on success',
-          () async {
-        stubPutSuccess();
-        final result = await crudApi.update(testId, updatedModel);
-        expect(result, equals(updatedModel));
-        verify(
-          () => mockHttpClient.put<Map<String, dynamic>>(
-            path,
-            data: updatedModelJson,
-          ),
-        ).called(1);
-      });
+        'should call httpClient.put and return deserialized model on success',
+        () async {
+          stubPutSuccess();
+          final result = await crudApi.update(testId, updatedModel);
+          expect(result, equals(updatedModel));
+          verify(
+            () => mockHttpClient.put<Map<String, dynamic>>(
+              path,
+              data: updatedModelJson,
+            ),
+          ).called(1);
+        },
+      );
 
       test('should throw HtHttpException when httpClient.put fails', () async {
         const exception = UnauthorizedException('Auth failed');
@@ -411,34 +422,36 @@ void main() {
       });
 
       // New test: generic exception from http client
-      test('should throw generic Exception when httpClient.put throws generic',
-          () async {
-        final exception = genericException;
-        // Stub with the original model being sent
-        when(
-          () => mockHttpClient.put<Map<String, dynamic>>(
-            path,
-            data: testModelJson,
-          ),
-        ).thenThrow(exception);
-
-        expect(
-          () => crudApi.update(testId, testModel),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: Something unexpected happened',
+      test(
+        'should throw generic Exception when httpClient.put throws generic',
+        () async {
+          final exception = genericException;
+          // Stub with the original model being sent
+          when(
+            () => mockHttpClient.put<Map<String, dynamic>>(
+              path,
+              data: testModelJson,
             ),
-          ),
-        );
-        verify(
-          () => mockHttpClient.put<Map<String, dynamic>>(
-            path,
-            data: testModelJson,
-          ),
-        ).called(1);
-      });
+          ).thenThrow(exception);
+
+          expect(
+            () => crudApi.update(testId, testModel),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
+            ),
+          );
+          verify(
+            () => mockHttpClient.put<Map<String, dynamic>>(
+              path,
+              data: testModelJson,
+            ),
+          ).called(1);
+        },
+      );
     });
 
     // --- Delete Tests ---
@@ -446,49 +459,55 @@ void main() {
       const path = '$testEndpoint/$testId';
 
       void stubDeleteSuccess() {
-        when(() => mockHttpClient.delete<dynamic>(path))
-            .thenAnswer((_) async => null); // Return null for success
+        when(
+          () => mockHttpClient.delete<dynamic>(path),
+        ).thenAnswer((_) async => null); // Return null for success
       }
 
       void stubDeleteFailure(Exception exception) {
         when(() => mockHttpClient.delete<dynamic>(path)).thenThrow(exception);
       }
 
-      test('should call httpClient.delete and complete normally on success',
-          () async {
-        stubDeleteSuccess();
-        await crudApi.delete(testId); // Should complete without error
-        verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
-      });
-
-      test('should throw HtHttpException when httpClient.delete fails',
-          () async {
-        const exception = ForbiddenException('Permission denied');
-        stubDeleteFailure(exception);
-        expect(
-          () => crudApi.delete(testId),
-          throwsA(isA<ForbiddenException>()),
-        );
-        verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
-      });
+      test(
+        'should call httpClient.delete and complete normally on success',
+        () async {
+          stubDeleteSuccess();
+          await crudApi.delete(testId); // Should complete without error
+          verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
+        },
+      );
 
       test(
-          'should throw generic Exception when httpClient.delete throws generic error',
-          () async {
-        final exception = genericException;
-        stubDeleteFailure(exception);
-        expect(
-          () => crudApi.delete(testId),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: Something unexpected happened',
+        'should throw HtHttpException when httpClient.delete fails',
+        () async {
+          const exception = ForbiddenException('Permission denied');
+          stubDeleteFailure(exception);
+          expect(
+            () => crudApi.delete(testId),
+            throwsA(isA<ForbiddenException>()),
+          );
+          verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
+        },
+      );
+
+      test(
+        'should throw generic Exception when httpClient.delete throws generic error',
+        () async {
+          final exception = genericException;
+          stubDeleteFailure(exception);
+          expect(
+            () => crudApi.delete(testId),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
             ),
-          ),
-        );
-        verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
-      });
+          );
+          verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
+        },
+      );
     });
   });
 }

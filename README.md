@@ -1,4 +1,4 @@
-# ht_crud_api
+# ht_data_api
 
 ![coverage: 100%](https://img.shields.io/badge/coverage-100-green)
 [![style: very good analysis](https://img.shields.io/badge/style-very_good_analysis-B22C89.svg)](https://pub.dev/packages/very_good_analysis)
@@ -12,7 +12,7 @@ Add this package to your `pubspec.yaml` dependencies:
 
 ```yaml
 dependencies:
-  ht_crud_api:
+  ht_data_api:
     git:
       url: https://github.com/headlines-toolkit/ht-crud-api.git
       # ref: <specific_tag_or_commit> # Optional: Pin to a specific version

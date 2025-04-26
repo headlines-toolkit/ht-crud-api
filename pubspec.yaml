@@ -1,15 +1,15 @@
-name: ht_crud_api
+name: ht_data_api
 description: A generic Dart package providing a reusable CrudApi class for interacting with RESTful endpoints via ht_http_client.
 repository: https://github.com/headlines-toolkit/ht-crud-api
 publish_to: none
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
-  ht_crud_client:
+  ht_data_client:
     git:
-      url: https://github.com/headlines-toolkit/ht-crud-client.git
+      url: https://github.com/headlines-toolkit/ht-data-client.git
   ht_http_client:
     git:
       url: https://github.com/headlines-toolkit/ht-http-client.git
