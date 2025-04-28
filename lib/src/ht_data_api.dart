@@ -1,5 +1,6 @@
 import 'package:ht_data_client/ht_data_client.dart';
 import 'package:ht_http_client/ht_http_client.dart';
+import 'package:ht_shared/ht_shared.dart';
 
 /// {@template ht_data_api}
 /// An implementation of [HtDataClient] that uses an [HtHttpClient] for
@@ -39,13 +40,17 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// ([_fromJson]) will also propagate. These exceptions are intended to be
   /// handled by the caller (e.g., Repository or BLoC layer).
   @override
-  Future<T> create(T item) async {
+  Future<SuccessApiResponse<T>> create(T item) async {
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
     final responseData = await _httpClient.post<Map<String, dynamic>>(
       _endpointPath,
       data: _toJson(item),
     );
-    return _fromJson(responseData);
+    // Deserialize the entire envelope
+    return SuccessApiResponse.fromJson(
+      responseData,
+      (json) => _fromJson(json! as Map<String, dynamic>),
+    );
   }
 
   /// Reads a single resource item of type [T] by its unique [id].
@@ -58,12 +63,16 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// ([_fromJson]) will also propagate. These exceptions are intended to be
   /// handled by the caller.
   @override
-  Future<T> read(String id) async {
+  Future<SuccessApiResponse<T>> read(String id) async {
     // Exceptions from _httpClient or _fromJson are allowed to propagate.
     final responseData = await _httpClient.get<Map<String, dynamic>>(
       '$_endpointPath/$id',
     );
-    return _fromJson(responseData);
+    // Deserialize the entire envelope
+    return SuccessApiResponse.fromJson(
+      responseData,
+      (json) => _fromJson(json! as Map<String, dynamic>),
+    );
   }
 
   /// Reads all resource items of type [T].
@@ -77,9 +86,12 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// deserialization ([_fromJson]). These exceptions are intended to be handled
   /// by the caller.
   @override
-  Future<List<T>> readAll({String? startAfterId, int? limit}) async {
+  Future<SuccessApiResponse<PaginatedResponse<T>>> readAll({
+    String? startAfterId,
+    int? limit,
+  }) async {
     // Exceptions from _httpClient are allowed to propagate.
-    final responseData = await _httpClient.get<List<dynamic>>(
+    final responseData = await _httpClient.get<Map<String, dynamic>>(
       _endpointPath,
       queryParameters: {
         if (startAfterId != null) 'startAfterId': startAfterId,
@@ -87,25 +99,14 @@ class HtDataApi<T> implements HtDataClient<T> {
       },
     );
 
-    try {
-      // Map response list, allowing _fromJson errors to propagate.
-      // Catch FormatException specifically if item type is wrong.
-      return responseData.map((item) {
-        if (item is Map<String, dynamic>) {
-          return _fromJson(item);
-        } else {
-          throw FormatException(
-            'Expected Map<String, dynamic> in list but got ${item.runtimeType}',
-            item,
-          );
-        }
-      }).toList();
-    } on FormatException {
-      // Allow FormatException from mapping logic to propagate.
-      rethrow;
-    }
-    // Other potential exceptions from _fromJson within the map will
-    // also propagate.
+    // Deserialize the entire envelope, including the PaginatedResponse
+    return SuccessApiResponse.fromJson(
+      responseData,
+      (json) => PaginatedResponse.fromJson(
+        json! as Map<String, dynamic>,
+        (itemJson) => _fromJson(itemJson! as Map<String, dynamic>),
+      ),
+    );
   }
 
   /// Reads multiple resource items of type [T] based on a [query].
@@ -122,13 +123,13 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// deserialization ([_fromJson]). These exceptions are intended to be handled
   /// by the caller.
   @override
-  Future<List<T>> readAllByQuery(
+  Future<SuccessApiResponse<PaginatedResponse<T>>> readAllByQuery(
     Map<String, dynamic> query, {
     String? startAfterId,
     int? limit,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
-    final responseData = await _httpClient.get<List<dynamic>>(
+    final responseData = await _httpClient.get<Map<String, dynamic>>(
       _endpointPath,
       queryParameters: {
         ...query,
@@ -137,25 +138,14 @@ class HtDataApi<T> implements HtDataClient<T> {
       },
     );
 
-    try {
-      // Map response list, allowing _fromJson errors to propagate.
-      // Catch FormatException specifically if item type is wrong.
-      return responseData.map((item) {
-        if (item is Map<String, dynamic>) {
-          return _fromJson(item);
-        } else {
-          throw FormatException(
-            'Expected Map<String, dynamic> in list but got ${item.runtimeType}',
-            item,
-          );
-        }
-      }).toList();
-    } on FormatException {
-      // Allow FormatException from mapping logic to propagate.
-      rethrow;
-    }
-    // Other potential exceptions from _fromJson within the map will
-    // also propagate.
+    // Deserialize the entire envelope, including the PaginatedResponse
+    return SuccessApiResponse.fromJson(
+      responseData,
+      (json) => PaginatedResponse.fromJson(
+        json! as Map<String, dynamic>,
+        (itemJson) => _fromJson(itemJson! as Map<String, dynamic>),
+      ),
+    );
   }
 
   /// Updates an existing resource item of type [T] identified by [id].
@@ -168,13 +158,17 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// ([_toJson]) or deserialization ([_fromJson]) will also propagate. These
   /// exceptions are intended to be handled by the caller.
   @override
-  Future<T> update(String id, T item) async {
+  Future<SuccessApiResponse<T>> update(String id, T item) async {
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
     final responseData = await _httpClient.put<Map<String, dynamic>>(
       '$_endpointPath/$id',
       data: _toJson(item),
     );
-    return _fromJson(responseData);
+    // Deserialize the entire envelope
+    return SuccessApiResponse.fromJson(
+      responseData,
+      (json) => _fromJson(json! as Map<String, dynamic>),
+    );
   }
 
   /// Deletes a resource item identified by [id].
