@@ -27,7 +27,9 @@ Then run `dart pub get` or `flutter pub get`.
 ## Features
 
 *   Provides a concrete implementation of the `HtDataClient<T>` abstract class.
-*   Implements data access methods: `create`, `read`, `readAll` (with pagination), `readAllByQuery` (with query parameters and pagination), `update`, `delete`.
+*   Implements data access methods (`create`, `read`, `update`) returning `Future<SuccessApiResponse<T>>`.
+*   Implements list retrieval methods (`readAll`, `readAllByQuery`) returning `Future<SuccessApiResponse<PaginatedResponse<T>>>`.
+*   Implements `delete` returning `Future<void>`.
 *   Requires an instance of `HtHttpClient` for making HTTP requests.
 *   Configurable with endpoint path and `fromJson`/`toJson` functions for the specific model `T`.
 *   Propagates `HtHttpException` errors from the underlying `HtHttpClient`.
@@ -91,18 +93,22 @@ Then run `dart pub get` or `flutter pub get`.
     try {
       // Create
       final newModelData = MyModel(id: '', name: 'New Item'); // ID might be ignored by API
-      final createdModel = await myModelApi.create(newModelData);
+      final createResponse = await myModelApi.create(newModelData);
+      final createdModel = createResponse.data; // Access data from envelope
       print('Created: ${createdModel.id}');
 
       // Read All
-      final allModels = await myModelApi.readAll();
+      final readAllResponse = await myModelApi.readAll();
+      final allModels = readAllResponse.data.items; // Access items from paginated data
       print('Found ${allModels.length} models.');
+      print('Has more: ${readAllResponse.data.hasMore}');
 
       // Read All by Query
-      final queryResults = await myModelApi.readAllByQuery({
+      final queryResponse = await myModelApi.readAllByQuery({
         'name': 'New Item',
         'limit': 1,
       });
+      final queryResults = queryResponse.data.items; // Access items
       print('Found ${queryResults.length} models matching query.');
       if (queryResults.isNotEmpty) {
         print('First query result: ${queryResults.first.name}');
@@ -111,15 +117,17 @@ Then run `dart pub get` or `flutter pub get`.
       // Read One
       if (allModels.isNotEmpty) {
         final firstModelId = allModels.first.id;
-        final fetchedModel = await myModelApi.read(firstModelId);
+        final readResponse = await myModelApi.read(firstModelId);
+        final fetchedModel = readResponse.data; // Access data from envelope
         print('Fetched: ${fetchedModel.name}');
 
         // Update
         final updatedData = MyModel(id: firstModelId, name: 'Updated Name');
-        final updatedModel = await myModelApi.update(firstModelId, updatedData);
+        final updateResponse = await myModelApi.update(firstModelId, updatedData);
+        final updatedModel = updateResponse.data; // Access data from envelope
         print('Updated: ${updatedModel.name}');
 
-        // Delete
+        // Delete (no change in return type)
         await myModelApi.delete(firstModelId);
         print('Deleted model with ID: $firstModelId');
       }
