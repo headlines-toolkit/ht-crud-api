@@ -3,7 +3,7 @@
 
 import 'package:ht_data_api/ht_data_api.dart';
 import 'package:ht_http_client/ht_http_client.dart';
-import 'package:ht_shared/ht_shared.dart'; // Import shared models
+import 'package:ht_shared/ht_shared.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
@@ -14,7 +14,7 @@ class MockHtHttpClient extends Mock implements HtHttpClient {}
 Map<String, dynamic> _createSuccessEnvelope(dynamic data) {
   return {
     'data': data,
-    'metadata': null, // Assuming metadata is null for these tests
+    'metadata': null,
   };
 }
 
@@ -80,11 +80,11 @@ void main() {
     registerFallbackValue('');
   });
 
-  group('CrudApi', () {
+  group('HtDataApi', () {
     late HtHttpClient mockHttpClient;
-    late HtDataApi<_TestModel> crudApi;
-    late HtDataApi<_TestModel> crudApiFromJsonThrows;
-    late HtDataApi<_TestModel> crudApiToJsonThrows;
+    late HtDataApi<_TestModel> htDataApi;
+    late HtDataApi<_TestModel> htDataApiFromJsonThrows;
+    late HtDataApi<_TestModel> htDataApiToJsonThrows;
 
     const testEndpoint = '/test-items';
     const testId = 'item-123';
@@ -96,25 +96,27 @@ void main() {
 
     // Pre-create enveloped responses for convenience
     final successEnvelopeSingle = _createSuccessEnvelope(testModelJson);
+    //
+    // ignore: unused_local_variable
     final successEnvelopePaginated = _createSuccessEnvelope(
       _createPaginatedResponseMap(testModelListJson),
     );
 
     setUp(() {
       mockHttpClient = MockHtHttpClient();
-      crudApi = HtDataApi<_TestModel>(
+      htDataApi = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
         endpointPath: testEndpoint,
         fromJson: _TestModel.fromJson,
         toJson: _TestModel.toJson,
       );
-      crudApiFromJsonThrows = HtDataApi<_TestModel>(
+      htDataApiFromJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
         endpointPath: testEndpoint,
         fromJson: _mockFromJsonThrows,
         toJson: _TestModel.toJson,
       );
-      crudApiToJsonThrows = HtDataApi<_TestModel>(
+      htDataApiToJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
         endpointPath: testEndpoint,
         fromJson: _TestModel.fromJson,
@@ -132,7 +134,7 @@ void main() {
             testEndpoint,
             data: testModelJson,
           ),
-        ).thenAnswer((_) async => successEnvelopeSingle); // Return envelope
+        ).thenAnswer((_) async => successEnvelopeSingle);
       }
 
       // Helper to stub failed post
@@ -149,8 +151,7 @@ void main() {
         'should call httpClient.post and return deserialized model on success',
         () async {
           stubPostSuccess();
-          final result = await crudApi.create(testModel);
-          // Expect the data within the envelope
+          final result = await htDataApi.create(testModel);
           expect(result, isA<SuccessApiResponse<_TestModel>>());
           expect(result.data, equals(testModel));
           verify(
@@ -166,7 +167,7 @@ void main() {
         const exception = BadRequestException('Invalid data');
         stubPostFailure(exception);
         expect(
-          () => crudApi.create(testModel),
+          () => htDataApi.create(testModel),
           throwsA(isA<BadRequestException>()),
         );
         verify(
@@ -180,7 +181,7 @@ void main() {
       test('should throw generic Exception when toJson fails', () async {
         // No stubbing needed as http client is not called
         expect(
-          () => crudApiToJsonThrows.create(testModel),
+          () => htDataApiToJsonThrows.create(testModel),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -189,10 +190,9 @@ void main() {
             ),
           ),
         );
-        // Correct verifyNever usage
         verifyNever(
           () => mockHttpClient.post<Map<String, dynamic>>(
-            any(), // Match any path
+            any(),
             data: any(named: 'data'), // Match any data using named argument
           ),
         );
@@ -203,9 +203,9 @@ void main() {
         'should throw generic Exception when httpClient.post throws generic',
         () async {
           final exception = genericException;
-          stubPostFailure(exception); // Stub with generic exception
+          stubPostFailure(exception);
           expect(
-            () => crudApi.create(testModel),
+            () => htDataApi.create(testModel),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -232,7 +232,7 @@ void main() {
       void stubGetSuccess() {
         when(
           () => mockHttpClient.get<Map<String, dynamic>>(path),
-        ).thenAnswer((_) async => successEnvelopeSingle); // Return envelope
+        ).thenAnswer((_) async => successEnvelopeSingle);
       }
 
       void stubGetFailure(Exception exception) {
@@ -245,8 +245,7 @@ void main() {
         'should call httpClient.get and return deserialized model on success',
         () async {
           stubGetSuccess();
-          final result = await crudApi.read(testId);
-          // Expect the data within the envelope
+          final result = await htDataApi.read(testId);
           expect(result, isA<SuccessApiResponse<_TestModel>>());
           expect(result.data, equals(testModel));
           verify(
@@ -258,7 +257,7 @@ void main() {
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = NotFoundException('Item not found');
         stubGetFailure(exception);
-        expect(() => crudApi.read(testId), throwsA(isA<NotFoundException>()));
+        expect(() => htDataApi.read(testId), throwsA(isA<NotFoundException>()));
         verify(() => mockHttpClient.get<Map<String, dynamic>>(path)).called(1);
       });
 
@@ -266,7 +265,7 @@ void main() {
         // Stub needs to return the envelope, even if fromJson will fail
         stubGetSuccess();
         expect(
-          () => crudApiFromJsonThrows.read(testId), // This API uses mockFromJsonThrows
+          () => htDataApiFromJsonThrows.read(testId),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -283,9 +282,9 @@ void main() {
         'should throw generic Exception when httpClient.get throws generic',
         () async {
           final exception = genericException;
-          stubGetFailure(exception); // Stub with generic exception
+          stubGetFailure(exception);
           expect(
-            () => crudApi.read(testId),
+            () => htDataApi.read(testId),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -317,11 +316,11 @@ void main() {
         );
         final envelope = _createSuccessEnvelope(paginatedData);
         when(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Expect Map now
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: queryParameters ?? {},
           ),
-        ).thenAnswer((_) async => envelope); // Return envelope
+        ).thenAnswer((_) async => envelope);
       }
 
       // Updated helper for failure, still expects Map
@@ -330,7 +329,7 @@ void main() {
         Map<String, dynamic>? queryParameters,
       }) {
         when(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Expect Map now
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: queryParameters ?? {},
           ),
@@ -344,15 +343,15 @@ void main() {
           items: testModelListJson,
           queryParameters: {},
         );
-        final result = await crudApi.readAll();
-        // Expect data within the envelope
-        expect(result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+        final result = await htDataApi.readAll();
+        expect(
+            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
         expect(result.data.items, equals(testModelList));
-        expect(result.data.hasMore, isFalse); // Check default hasMore
+        expect(result.data.hasMore, isFalse);
         verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
-            queryParameters: {}, // Expect empty map
+            queryParameters: {},
           ),
         ).called(1);
       });
@@ -367,33 +366,32 @@ void main() {
         stubGetAllSuccess(
           items: testModelListJson,
           queryParameters: queryParams,
-          hasMore: true, // Example: test hasMore
+          hasMore: true,
         );
-        final result = await crudApi.readAll(
+        final result = await htDataApi.readAll(
           startAfterId: startAfterId,
           limit: limit,
         );
-        // Expect data within the envelope
-        expect(result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+        expect(
+            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
         expect(result.data.items, equals(testModelList));
-        expect(result.data.hasMore, isTrue); // Check hasMore
+        expect(result.data.hasMore, isTrue);
         verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
-            queryParameters: queryParams, // Expect pagination params
+            queryParameters: queryParams,
           ),
         ).called(1);
       });
 
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = ServerException('Server error');
-        // Verify empty query map is passed by default on failure too
         stubGetAllFailure(exception: exception, queryParameters: {});
-        expect(() => crudApi.readAll(), throwsA(isA<ServerException>()));
+        expect(() => htDataApi.readAll(), throwsA(isA<ServerException>()));
         verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
-            queryParameters: {}, // Expect empty map
+            queryParameters: {},
           ),
         ).called(1);
       });
@@ -401,25 +399,24 @@ void main() {
       test(
         'should throw FormatException when list item is not a Map',
         () async {
-        // Stub needs to return envelope with malformed paginated data inside
-        final malformedPaginatedData = _createPaginatedResponseMap(
-          [testModelJson, 123], // Invalid item in list
-        );
-        final envelopeWithMalformedData =
-            _createSuccessEnvelope(malformedPaginatedData);
-        when(
-          () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: {},
-          ),
-        ).thenAnswer((_) async => envelopeWithMalformedData);
-
-        // Expect FormatException during deserialization of items
-        expect(() => crudApi.readAll(), throwsA(isA<FormatException>()));
-        verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          // Stub needs to return envelope with malformed paginated data inside
+          final malformedPaginatedData = _createPaginatedResponseMap(
+            [testModelJson, 123],
+          );
+          final envelopeWithMalformedData =
+              _createSuccessEnvelope(malformedPaginatedData);
+          when(
+            () => mockHttpClient.get<Map<String, dynamic>>(
               testEndpoint,
-              queryParameters: {}, // Expect empty map
+              queryParameters: {},
+            ),
+          ).thenAnswer((_) async => envelopeWithMalformedData);
+
+          expect(() => htDataApi.readAll(), throwsA(isA<FormatException>()));
+          verify(
+            () => mockHttpClient.get<Map<String, dynamic>>(
+              testEndpoint,
+              queryParameters: {},
             ),
           ).called(1);
         },
@@ -428,13 +425,13 @@ void main() {
       test(
         'should throw generic Exception when fromJson fails during mapping',
         () async {
-        // Stub needs to return a valid envelope, failure happens in fromJson
-        stubGetAllSuccess(
-          items: testModelListJson,
-          queryParameters: {},
-        );
-        expect(
-          () => crudApiFromJsonThrows.readAll(), // Uses mockFromJsonThrows
+          // Stub needs to return a valid envelope, failure happens in fromJson
+          stubGetAllSuccess(
+            items: testModelListJson,
+            queryParameters: {},
+          );
+          expect(
+            () => htDataApiFromJsonThrows.readAll(),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -444,9 +441,9 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+            () => mockHttpClient.get<Map<String, dynamic>>(
               testEndpoint,
-              queryParameters: {}, // Expect empty map
+              queryParameters: {},
             ),
           ).called(1);
         },
@@ -456,10 +453,9 @@ void main() {
         'should throw generic Exception when httpClient throws generic error',
         () async {
           final exception = genericException;
-          // Verify empty query map is passed by default on failure too
           stubGetAllFailure(exception: exception, queryParameters: {});
           expect(
-            () => crudApi.readAll(),
+            () => htDataApi.readAll(),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -469,9 +465,9 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+            () => mockHttpClient.get<Map<String, dynamic>>(
               testEndpoint,
-              queryParameters: {}, // Expect empty map
+              queryParameters: {},
             ),
           ).called(1);
         },
@@ -503,11 +499,11 @@ void main() {
         );
         final envelope = _createSuccessEnvelope(paginatedData);
         when(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Expect Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: queryParameters,
           ),
-        ).thenAnswer((_) async => envelope); // Return envelope
+        ).thenAnswer((_) async => envelope);
       }
 
       // Helper for failed query, still expects Map
@@ -516,7 +512,7 @@ void main() {
         required Map<String, dynamic> queryParameters,
       }) {
         when(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Expect Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: queryParameters,
           ),
@@ -530,13 +526,13 @@ void main() {
           items: testModelListJson,
           queryParameters: testQuery,
         );
-        final result = await crudApi.readAllByQuery(testQuery);
-        // Expect data within the envelope
-        expect(result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+        final result = await htDataApi.readAllByQuery(testQuery);
+        expect(
+            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
         expect(result.data.items, equals(testModelList));
         expect(result.data.hasMore, isFalse);
         verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: testQuery,
           ),
@@ -549,19 +545,19 @@ void main() {
         stubGetByQuerySuccess(
           items: testModelListJson,
           queryParameters: testQueryWithPagination,
-          hasMore: true, // Example: test hasMore
+          hasMore: true,
         );
-        final result = await crudApi.readAllByQuery(
+        final result = await htDataApi.readAllByQuery(
           testQuery,
           startAfterId: testStartAfterId,
           limit: testLimit,
         );
-        // Expect data within the envelope
-        expect(result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+        expect(
+            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
         expect(result.data.items, equals(testModelList));
         expect(result.data.hasMore, isTrue);
         verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: testQueryWithPagination,
           ),
@@ -575,11 +571,11 @@ void main() {
           queryParameters: testQuery,
         );
         expect(
-          () => crudApi.readAllByQuery(testQuery),
+          () => htDataApi.readAllByQuery(testQuery),
           throwsA(isA<ServerException>()),
         );
         verify(
-          () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+          () => mockHttpClient.get<Map<String, dynamic>>(
             testEndpoint,
             queryParameters: testQuery,
           ),
@@ -591,7 +587,7 @@ void main() {
         () async {
           // Stub needs to return envelope with malformed paginated data inside
           final malformedPaginatedData = _createPaginatedResponseMap(
-            [testModelJson, 123], // Invalid item in list
+            [testModelJson, 123],
           );
           final envelopeWithMalformedData =
               _createSuccessEnvelope(malformedPaginatedData);
@@ -602,13 +598,12 @@ void main() {
             ),
           ).thenAnswer((_) async => envelopeWithMalformedData);
 
-          // Expect FormatException during deserialization of items
           expect(
-            () => crudApi.readAllByQuery(testQuery),
+            () => htDataApi.readAllByQuery(testQuery),
             throwsA(isA<FormatException>()),
           );
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+            () => mockHttpClient.get<Map<String, dynamic>>(
               testEndpoint,
               queryParameters: testQuery,
             ),
@@ -625,7 +620,7 @@ void main() {
             queryParameters: testQuery,
           );
           expect(
-            () => crudApiFromJsonThrows.readAllByQuery(testQuery), // Uses mock
+            () => htDataApiFromJsonThrows.readAllByQuery(testQuery),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -635,7 +630,7 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+            () => mockHttpClient.get<Map<String, dynamic>>(
               testEndpoint,
               queryParameters: testQuery,
             ),
@@ -652,7 +647,7 @@ void main() {
             queryParameters: testQuery,
           );
           expect(
-            () => crudApi.readAllByQuery(testQuery),
+            () => htDataApi.readAllByQuery(testQuery),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -662,7 +657,7 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>( // Verify Map
+            () => mockHttpClient.get<Map<String, dynamic>>(
               testEndpoint,
               queryParameters: testQuery,
             ),
@@ -676,7 +671,6 @@ void main() {
       const path = '$testEndpoint/$testId';
       const updatedModel = _TestModel(id: testId, name: 'Updated Name');
       final updatedModelJson = _TestModel.toJson(updatedModel);
-      // Pre-create envelope for updated model
       final successEnvelopeUpdated = _createSuccessEnvelope(updatedModelJson);
 
       // Helper to stub successful put returning an envelope
@@ -686,15 +680,14 @@ void main() {
             path,
             data: updatedModelJson,
           ),
-        ).thenAnswer((_) async => successEnvelopeUpdated); // Return envelope
+        ).thenAnswer((_) async => successEnvelopeUpdated);
       }
 
       test(
         'should call httpClient.put and return deserialized model on success',
         () async {
           stubPutSuccess();
-          final result = await crudApi.update(testId, updatedModel);
-          // Expect data within the envelope
+          final result = await htDataApi.update(testId, updatedModel);
           expect(result, isA<SuccessApiResponse<_TestModel>>());
           expect(result.data, equals(updatedModel));
           verify(
@@ -712,12 +705,12 @@ void main() {
         when(
           () => mockHttpClient.put<Map<String, dynamic>>(
             path,
-            data: testModelJson, // Use original model for this failure case
+            data: testModelJson,
           ),
         ).thenThrow(exception);
 
         expect(
-          () => crudApi.update(testId, testModel), // Call with original model
+          () => htDataApi.update(testId, testModel),
           throwsA(isA<UnauthorizedException>()),
         );
         verify(
@@ -731,7 +724,7 @@ void main() {
       test('should throw generic Exception when toJson fails', () async {
         // No stubbing needed
         expect(
-          () => crudApiToJsonThrows.update(testId, testModel),
+          () => htDataApiToJsonThrows.update(testId, testModel),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -743,7 +736,7 @@ void main() {
         verifyNever(
           () => mockHttpClient.put<Map<String, dynamic>>(
             any(), // Match any path
-            data: any(named: 'data'), // Match any data
+            data: any(named: 'data'),
           ),
         );
       });
@@ -762,7 +755,7 @@ void main() {
           ).thenThrow(exception);
 
           expect(
-            () => crudApi.update(testId, testModel),
+            () => htDataApi.update(testId, testModel),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -788,7 +781,7 @@ void main() {
       void stubDeleteSuccess() {
         when(
           () => mockHttpClient.delete<dynamic>(path),
-        ).thenAnswer((_) async => null); // Return null for success
+        ).thenAnswer((_) async => null);
       }
 
       void stubDeleteFailure(Exception exception) {
@@ -799,7 +792,7 @@ void main() {
         'should call httpClient.delete and complete normally on success',
         () async {
           stubDeleteSuccess();
-          await crudApi.delete(testId); // Should complete without error
+          await htDataApi.delete(testId);
           verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
         },
       );
@@ -810,7 +803,7 @@ void main() {
           const exception = ForbiddenException('Permission denied');
           stubDeleteFailure(exception);
           expect(
-            () => crudApi.delete(testId),
+            () => htDataApi.delete(testId),
             throwsA(isA<ForbiddenException>()),
           );
           verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
@@ -823,7 +816,7 @@ void main() {
           final exception = genericException;
           stubDeleteFailure(exception);
           expect(
-            () => crudApi.delete(testId),
+            () => htDataApi.delete(testId),
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
