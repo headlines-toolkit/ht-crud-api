@@ -345,7 +345,9 @@ void main() {
         );
         final result = await htDataApi.readAll();
         expect(
-            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+          result,
+          isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
+        );
         expect(result.data.items, equals(testModelList));
         expect(result.data.hasMore, isFalse);
         verify(
@@ -373,7 +375,9 @@ void main() {
           limit: limit,
         );
         expect(
-            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+          result,
+          isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
+        );
         expect(result.data.items, equals(testModelList));
         expect(result.data.hasMore, isTrue);
         verify(
@@ -528,7 +532,9 @@ void main() {
         );
         final result = await htDataApi.readAllByQuery(testQuery);
         expect(
-            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+          result,
+          isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
+        );
         expect(result.data.items, equals(testModelList));
         expect(result.data.hasMore, isFalse);
         verify(
@@ -553,7 +559,9 @@ void main() {
           limit: testLimit,
         );
         expect(
-            result, isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>());
+          result,
+          isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
+        );
         expect(result.data.items, equals(testModelList));
         expect(result.data.hasMore, isTrue);
         verify(
