@@ -46,7 +46,6 @@ class HtDataApi<T> implements HtDataClient<T> {
       _endpointPath,
       data: _toJson(item),
     );
-    // Deserialize the entire envelope
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => _fromJson(json! as Map<String, dynamic>),
@@ -68,7 +67,6 @@ class HtDataApi<T> implements HtDataClient<T> {
     final responseData = await _httpClient.get<Map<String, dynamic>>(
       '$_endpointPath/$id',
     );
-    // Deserialize the entire envelope
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => _fromJson(json! as Map<String, dynamic>),
@@ -99,7 +97,6 @@ class HtDataApi<T> implements HtDataClient<T> {
       },
     );
 
-    // Deserialize the entire envelope, including the PaginatedResponse
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => PaginatedResponse.fromJson(
@@ -110,6 +107,8 @@ class HtDataApi<T> implements HtDataClient<T> {
             return _fromJson(itemJson);
           } else {
             throw FormatException(
+              //
+              // ignore: lines_longer_than_80_chars
               'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
               itemJson,
             );
@@ -148,7 +147,6 @@ class HtDataApi<T> implements HtDataClient<T> {
       },
     );
 
-    // Deserialize the entire envelope, including the PaginatedResponse
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => PaginatedResponse.fromJson(
@@ -159,6 +157,8 @@ class HtDataApi<T> implements HtDataClient<T> {
             return _fromJson(itemJson);
           } else {
             throw FormatException(
+              //
+              // ignore: lines_longer_than_80_chars
               'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
               itemJson,
             );
@@ -184,7 +184,6 @@ class HtDataApi<T> implements HtDataClient<T> {
       '$_endpointPath/$id',
       data: _toJson(item),
     );
-    // Deserialize the entire envelope
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => _fromJson(json! as Map<String, dynamic>),
