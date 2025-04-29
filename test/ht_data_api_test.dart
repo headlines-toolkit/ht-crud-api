@@ -86,7 +86,8 @@ void main() {
     late HtDataApi<_TestModel> htDataApiFromJsonThrows;
     late HtDataApi<_TestModel> htDataApiToJsonThrows;
 
-    const testEndpoint = '/test-items';
+    const testModelName = 'test-model'; // Added model name for tests
+    const testBasePath = '/api/v1/data'; // Unified base path
     const testId = 'item-123';
     const testModel = _TestModel(id: testId, name: 'Test Name');
     final testModelJson = _TestModel.toJson(testModel);
@@ -106,19 +107,19 @@ void main() {
       mockHttpClient = MockHtHttpClient();
       htDataApi = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
-        endpointPath: testEndpoint,
+        modelName: testModelName, // Added modelName
         fromJson: _TestModel.fromJson,
         toJson: _TestModel.toJson,
       );
       htDataApiFromJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
-        endpointPath: testEndpoint,
+        modelName: testModelName, // Added modelName
         fromJson: _mockFromJsonThrows,
         toJson: _TestModel.toJson,
       );
       htDataApiToJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
-        endpointPath: testEndpoint,
+        modelName: testModelName, // Added modelName
         fromJson: _TestModel.fromJson,
         toJson: _mockToJsonThrows,
       );
@@ -131,8 +132,9 @@ void main() {
       void stubPostSuccess() {
         when(
           () => mockHttpClient.post<Map<String, dynamic>>(
-            testEndpoint,
+            testBasePath, // Use base path
             data: testModelJson,
+            queryParameters: {'model': testModelName}, // Add model query param
           ),
         ).thenAnswer((_) async => successEnvelopeSingle);
       }
@@ -141,8 +143,9 @@ void main() {
       void stubPostFailure(Exception exception) {
         when(
           () => mockHttpClient.post<Map<String, dynamic>>(
-            testEndpoint,
+            testBasePath, // Use base path
             data: testModelJson,
+            queryParameters: {'model': testModelName}, // Add model query param
           ),
         ).thenThrow(exception);
       }
@@ -156,8 +159,9 @@ void main() {
           expect(result.data, equals(testModel));
           verify(
             () => mockHttpClient.post<Map<String, dynamic>>(
-              testEndpoint,
+              testBasePath, // Verify base path
               data: testModelJson,
+              queryParameters: {'model': testModelName}, // Verify query param
             ),
           ).called(1);
         },
@@ -172,8 +176,9 @@ void main() {
         );
         verify(
           () => mockHttpClient.post<Map<String, dynamic>>(
-            testEndpoint,
+            testBasePath, // Verify base path
             data: testModelJson,
+            queryParameters: {'model': testModelName}, // Verify query param
           ),
         ).called(1);
       });
@@ -193,7 +198,8 @@ void main() {
         verifyNever(
           () => mockHttpClient.post<Map<String, dynamic>>(
             any(),
-            data: any(named: 'data'), // Match any data using named argument
+            data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'), // Match any query
           ),
         );
       });
@@ -216,8 +222,9 @@ void main() {
           );
           verify(
             () => mockHttpClient.post<Map<String, dynamic>>(
-              testEndpoint,
+              testBasePath, // Verify base path
               data: testModelJson,
+              queryParameters: {'model': testModelName}, // Verify query param
             ),
           ).called(1);
         },
@@ -226,18 +233,25 @@ void main() {
 
     // --- Read Tests ---
     group('read', () {
-      const path = '$testEndpoint/$testId';
+      const path = '$testBasePath/$testId'; // Use base path
+      final queryParams = {'model': testModelName}; // Add model query param
 
       // Helper to stub successful get returning an envelope
       void stubGetSuccess() {
         when(
-          () => mockHttpClient.get<Map<String, dynamic>>(path),
+          () => mockHttpClient.get<Map<String, dynamic>>(
+            path,
+            queryParameters: queryParams, // Add query param
+          ),
         ).thenAnswer((_) async => successEnvelopeSingle);
       }
 
       void stubGetFailure(Exception exception) {
         when(
-          () => mockHttpClient.get<Map<String, dynamic>>(path),
+          () => mockHttpClient.get<Map<String, dynamic>>(
+            path,
+            queryParameters: queryParams, // Add query param
+          ),
         ).thenThrow(exception);
       }
 
@@ -249,7 +263,10 @@ void main() {
           expect(result, isA<SuccessApiResponse<_TestModel>>());
           expect(result.data, equals(testModel));
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(path),
+            () => mockHttpClient.get<Map<String, dynamic>>(
+              path,
+              queryParameters: queryParams, // Verify query param
+            ),
           ).called(1);
         },
       );
@@ -258,7 +275,12 @@ void main() {
         const exception = NotFoundException('Item not found');
         stubGetFailure(exception);
         expect(() => htDataApi.read(testId), throwsA(isA<NotFoundException>()));
-        verify(() => mockHttpClient.get<Map<String, dynamic>>(path)).called(1);
+        verify(
+          () => mockHttpClient.get<Map<String, dynamic>>(
+            path,
+            queryParameters: queryParams, // Verify query param
+          ),
+        ).called(1);
       });
 
       test('should throw generic Exception when fromJson fails', () async {
@@ -274,7 +296,12 @@ void main() {
             ),
           ),
         );
-        verify(() => mockHttpClient.get<Map<String, dynamic>>(path)).called(1);
+        verify(
+          () => mockHttpClient.get<Map<String, dynamic>>(
+            path,
+            queryParameters: queryParams, // Verify query param
+          ),
+        ).called(1);
       });
 
       // New test: generic exception from http client
@@ -294,7 +321,10 @@ void main() {
             ),
           );
           verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(path),
+            () => mockHttpClient.get<Map<String, dynamic>>(
+              path,
+              queryParameters: queryParams, // Verify query param
+            ),
           ).called(1);
         },
       );
@@ -302,10 +332,12 @@ void main() {
 
     // --- ReadAll Tests ---
     group('readAll', () {
+      final baseQueryParams = {'model': testModelName}; // Base query
+
       // Updated helper to return enveloped paginated response
       void stubGetAllSuccess({
         List<dynamic> items = const [],
-        Map<String, dynamic>? queryParameters,
+        required Map<String, dynamic> queryParameters, // Now required
         bool hasMore = false,
         String? cursor,
       }) {
@@ -317,8 +349,8 @@ void main() {
         final envelope = _createSuccessEnvelope(paginatedData);
         when(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: queryParameters ?? {},
+            testBasePath, // Use base path
+            queryParameters: queryParameters,
           ),
         ).thenAnswer((_) async => envelope);
       }
@@ -326,22 +358,22 @@ void main() {
       // Updated helper for failure, still expects Map
       void stubGetAllFailure({
         required Exception exception,
-        Map<String, dynamic>? queryParameters,
+        required Map<String, dynamic> queryParameters, // Now required
       }) {
         when(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: queryParameters ?? {},
+            testBasePath, // Use base path
+            queryParameters: queryParameters,
           ),
         ).thenThrow(exception);
       }
 
       test(
-          'should call httpClient.get with empty query and return list '
+          'should call httpClient.get with model query and return list '
           'on success', () async {
         stubGetAllSuccess(
           items: testModelListJson,
-          queryParameters: {},
+          queryParameters: baseQueryParams, // Use base query
         );
         final result = await htDataApi.readAll();
         expect(
@@ -352,19 +384,23 @@ void main() {
         expect(result.data.hasMore, isFalse);
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: {},
+            testBasePath, // Verify base path
+            queryParameters: baseQueryParams, // Verify base query
           ),
         ).called(1);
       });
 
       // New test for pagination parameters
       test(
-          'should call httpClient.get with pagination query and return list '
+          'should call httpClient.get with model and pagination query and return list '
           'on success', () async {
         const startAfterId = 'item-100';
         const limit = 10;
-        final queryParams = {'startAfterId': startAfterId, 'limit': limit};
+        final queryParams = {
+          ...baseQueryParams, // Include base model query
+          'startAfterId': startAfterId,
+          'limit': limit,
+        };
         stubGetAllSuccess(
           items: testModelListJson,
           queryParameters: queryParams,
@@ -382,20 +418,20 @@ void main() {
         expect(result.data.hasMore, isTrue);
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: queryParams,
+            testBasePath, // Verify base path
+            queryParameters: queryParams, // Verify combined query
           ),
         ).called(1);
       });
 
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = ServerException('Server error');
-        stubGetAllFailure(exception: exception, queryParameters: {});
+        stubGetAllFailure(exception: exception, queryParameters: baseQueryParams);
         expect(() => htDataApi.readAll(), throwsA(isA<ServerException>()));
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: {},
+            testBasePath, // Verify base path
+            queryParameters: baseQueryParams, // Verify base query
           ),
         ).called(1);
       });
@@ -411,16 +447,16 @@ void main() {
               _createSuccessEnvelope(malformedPaginatedData);
           when(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: {},
+              testBasePath, // Use base path
+              queryParameters: baseQueryParams, // Use base query
             ),
           ).thenAnswer((_) async => envelopeWithMalformedData);
 
           expect(() => htDataApi.readAll(), throwsA(isA<FormatException>()));
           verify(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: {},
+              testBasePath, // Verify base path
+              queryParameters: baseQueryParams, // Verify base query
             ),
           ).called(1);
         },
@@ -432,7 +468,7 @@ void main() {
           // Stub needs to return a valid envelope, failure happens in fromJson
           stubGetAllSuccess(
             items: testModelListJson,
-            queryParameters: {},
+            queryParameters: baseQueryParams, // Use base query
           );
           expect(
             () => htDataApiFromJsonThrows.readAll(),
@@ -446,8 +482,8 @@ void main() {
           );
           verify(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: {},
+              testBasePath, // Verify base path
+              queryParameters: baseQueryParams, // Verify base query
             ),
           ).called(1);
         },
@@ -457,7 +493,7 @@ void main() {
         'should throw generic Exception when httpClient throws generic error',
         () async {
           final exception = genericException;
-          stubGetAllFailure(exception: exception, queryParameters: {});
+          stubGetAllFailure(exception: exception, queryParameters: baseQueryParams);
           expect(
             () => htDataApi.readAll(),
             throwsA(
@@ -470,8 +506,8 @@ void main() {
           );
           verify(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: {},
+              testBasePath, // Verify base path
+              queryParameters: baseQueryParams, // Verify base query
             ),
           ).called(1);
         },
@@ -480,11 +516,13 @@ void main() {
 
     // --- ReadAllByQuery Tests ---
     group('readAllByQuery', () {
-      final testQuery = {'category': 'test', 'active': true};
+      final baseQueryParams = {'model': testModelName}; // Base query
+      final testUserQuery = {'category': 'test', 'active': true};
       const testStartAfterId = 'item-200';
       const testLimit = 5;
-      final testQueryWithPagination = {
-        ...testQuery,
+      final combinedQuery = {...baseQueryParams, ...testUserQuery};
+      final combinedQueryWithPagination = {
+        ...combinedQuery,
         'startAfterId': testStartAfterId,
         'limit': testLimit,
       };
@@ -504,7 +542,7 @@ void main() {
         final envelope = _createSuccessEnvelope(paginatedData);
         when(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
+            testBasePath, // Use base path
             queryParameters: queryParameters,
           ),
         ).thenAnswer((_) async => envelope);
@@ -517,20 +555,20 @@ void main() {
       }) {
         when(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
+            testBasePath, // Use base path
             queryParameters: queryParameters,
           ),
         ).thenThrow(exception);
       }
 
       test(
-          'should call httpClient.get with query and return list '
+          'should call httpClient.get with combined query and return list '
           'on success', () async {
         stubGetByQuerySuccess(
           items: testModelListJson,
-          queryParameters: testQuery,
+          queryParameters: combinedQuery, // Use combined query
         );
-        final result = await htDataApi.readAllByQuery(testQuery);
+        final result = await htDataApi.readAllByQuery(testUserQuery); // Pass user query
         expect(
           result,
           isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
@@ -539,22 +577,22 @@ void main() {
         expect(result.data.hasMore, isFalse);
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: testQuery,
+            testBasePath, // Verify base path
+            queryParameters: combinedQuery, // Verify combined query
           ),
         ).called(1);
       });
 
       test(
-          'should call httpClient.get with query and pagination and return list '
+          'should call httpClient.get with combined query and pagination and return list '
           'on success', () async {
         stubGetByQuerySuccess(
           items: testModelListJson,
-          queryParameters: testQueryWithPagination,
+          queryParameters: combinedQueryWithPagination, // Use combined+pagination
           hasMore: true,
         );
         final result = await htDataApi.readAllByQuery(
-          testQuery,
+          testUserQuery, // Pass user query
           startAfterId: testStartAfterId,
           limit: testLimit,
         );
@@ -566,8 +604,8 @@ void main() {
         expect(result.data.hasMore, isTrue);
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: testQueryWithPagination,
+            testBasePath, // Verify base path
+            queryParameters: combinedQueryWithPagination, // Verify combined+pagination
           ),
         ).called(1);
       });
@@ -576,16 +614,16 @@ void main() {
         const exception = ServerException('Server error');
         stubGetByQueryFailure(
           exception: exception,
-          queryParameters: testQuery,
+          queryParameters: combinedQuery, // Use combined query
         );
         expect(
-          () => htDataApi.readAllByQuery(testQuery),
+          () => htDataApi.readAllByQuery(testUserQuery), // Pass user query
           throwsA(isA<ServerException>()),
         );
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
-            testEndpoint,
-            queryParameters: testQuery,
+            testBasePath, // Verify base path
+            queryParameters: combinedQuery, // Verify combined query
           ),
         ).called(1);
       });
@@ -601,19 +639,19 @@ void main() {
               _createSuccessEnvelope(malformedPaginatedData);
           when(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: testQuery,
+              testBasePath, // Use base path
+              queryParameters: combinedQuery, // Use combined query
             ),
           ).thenAnswer((_) async => envelopeWithMalformedData);
 
           expect(
-            () => htDataApi.readAllByQuery(testQuery),
+            () => htDataApi.readAllByQuery(testUserQuery), // Pass user query
             throwsA(isA<FormatException>()),
           );
           verify(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: testQuery,
+              testBasePath, // Verify base path
+              queryParameters: combinedQuery, // Verify combined query
             ),
           ).called(1);
         },
@@ -625,10 +663,10 @@ void main() {
           // Stub needs to return a valid envelope, failure happens in fromJson
           stubGetByQuerySuccess(
             items: testModelListJson,
-            queryParameters: testQuery,
+            queryParameters: combinedQuery, // Use combined query
           );
           expect(
-            () => htDataApiFromJsonThrows.readAllByQuery(testQuery),
+            () => htDataApiFromJsonThrows.readAllByQuery(testUserQuery), // Pass user query
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -639,8 +677,8 @@ void main() {
           );
           verify(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: testQuery,
+              testBasePath, // Verify base path
+              queryParameters: combinedQuery, // Verify combined query
             ),
           ).called(1);
         },
@@ -652,10 +690,10 @@ void main() {
           final exception = genericException;
           stubGetByQueryFailure(
             exception: exception,
-            queryParameters: testQuery,
+            queryParameters: combinedQuery, // Use combined query
           );
           expect(
-            () => htDataApi.readAllByQuery(testQuery),
+            () => htDataApi.readAllByQuery(testUserQuery), // Pass user query
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -666,8 +704,8 @@ void main() {
           );
           verify(
             () => mockHttpClient.get<Map<String, dynamic>>(
-              testEndpoint,
-              queryParameters: testQuery,
+              testBasePath, // Verify base path
+              queryParameters: combinedQuery, // Verify combined query
             ),
           ).called(1);
         },
@@ -676,7 +714,8 @@ void main() {
 
     // --- Update Tests ---
     group('update', () {
-      const path = '$testEndpoint/$testId';
+      const path = '$testBasePath/$testId'; // Use base path
+      final queryParams = {'model': testModelName}; // Add model query param
       const updatedModel = _TestModel(id: testId, name: 'Updated Name');
       final updatedModelJson = _TestModel.toJson(updatedModel);
       final successEnvelopeUpdated = _createSuccessEnvelope(updatedModelJson);
@@ -687,6 +726,7 @@ void main() {
           () => mockHttpClient.put<Map<String, dynamic>>(
             path,
             data: updatedModelJson,
+            queryParameters: queryParams, // Add query param
           ),
         ).thenAnswer((_) async => successEnvelopeUpdated);
       }
@@ -702,6 +742,7 @@ void main() {
             () => mockHttpClient.put<Map<String, dynamic>>(
               path,
               data: updatedModelJson,
+              queryParameters: queryParams, // Verify query param
             ),
           ).called(1);
         },
@@ -714,6 +755,7 @@ void main() {
           () => mockHttpClient.put<Map<String, dynamic>>(
             path,
             data: testModelJson,
+            queryParameters: queryParams, // Add query param
           ),
         ).thenThrow(exception);
 
@@ -725,6 +767,7 @@ void main() {
           () => mockHttpClient.put<Map<String, dynamic>>(
             path,
             data: testModelJson,
+            queryParameters: queryParams, // Verify query param
           ),
         ).called(1);
       });
@@ -743,8 +786,9 @@ void main() {
         );
         verifyNever(
           () => mockHttpClient.put<Map<String, dynamic>>(
-            any(), // Match any path
+            any(),
             data: any(named: 'data'),
+            queryParameters: any(named: 'queryParameters'), // Match any query
           ),
         );
       });
@@ -755,45 +799,56 @@ void main() {
         () async {
           final exception = genericException;
           // Stub with the original model being sent
-          when(
-            () => mockHttpClient.put<Map<String, dynamic>>(
-              path,
-              data: testModelJson,
-            ),
-          ).thenThrow(exception);
+        when(
+          () => mockHttpClient.put<Map<String, dynamic>>(
+            path,
+            data: testModelJson,
+            queryParameters: queryParams, // Add query param
+          ),
+        ).thenThrow(exception);
 
-          expect(
-            () => htDataApi.update(testId, testModel),
-            throwsA(
-              isA<Exception>().having(
-                (e) => e.toString(),
-                'message',
-                'Exception: Something unexpected happened',
-              ),
+        expect(
+          () => htDataApi.update(testId, testModel),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              'Exception: Something unexpected happened',
             ),
-          );
-          verify(
-            () => mockHttpClient.put<Map<String, dynamic>>(
-              path,
-              data: testModelJson,
-            ),
-          ).called(1);
+          ),
+        );
+        verify(
+          () => mockHttpClient.put<Map<String, dynamic>>(
+            path,
+            data: testModelJson,
+            queryParameters: queryParams, // Verify query param
+          ),
+        ).called(1);
         },
       );
     });
 
     // --- Delete Tests ---
     group('delete', () {
-      const path = '$testEndpoint/$testId';
+      const path = '$testBasePath/$testId'; // Use base path
+      final queryParams = {'model': testModelName}; // Add model query param
 
       void stubDeleteSuccess() {
         when(
-          () => mockHttpClient.delete<dynamic>(path),
+          () => mockHttpClient.delete<dynamic>(
+            path,
+            queryParameters: queryParams, // Add query param
+          ),
         ).thenAnswer((_) async => null);
       }
 
       void stubDeleteFailure(Exception exception) {
-        when(() => mockHttpClient.delete<dynamic>(path)).thenThrow(exception);
+        when(
+          () => mockHttpClient.delete<dynamic>(
+            path,
+            queryParameters: queryParams, // Add query param
+          ),
+        ).thenThrow(exception);
       }
 
       test(
@@ -801,7 +856,12 @@ void main() {
         () async {
           stubDeleteSuccess();
           await htDataApi.delete(testId);
-          verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
+          verify(
+            () => mockHttpClient.delete<dynamic>(
+              path,
+              queryParameters: queryParams, // Verify query param
+            ),
+          ).called(1);
         },
       );
 
@@ -814,7 +874,12 @@ void main() {
             () => htDataApi.delete(testId),
             throwsA(isA<ForbiddenException>()),
           );
-          verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
+          verify(
+            () => mockHttpClient.delete<dynamic>(
+              path,
+              queryParameters: queryParams, // Verify query param
+            ),
+          ).called(1);
         },
       );
 
@@ -833,7 +898,12 @@ void main() {
               ),
             ),
           );
-          verify(() => mockHttpClient.delete<dynamic>(path)).called(1);
+          verify(
+            () => mockHttpClient.delete<dynamic>(
+              path,
+              queryParameters: queryParams, // Verify query param
+            ),
+          ).called(1);
         },
       );
     });
