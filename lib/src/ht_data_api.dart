@@ -11,28 +11,33 @@ import 'package:ht_shared/ht_shared.dart';
 /// managing serialization/deserialization via provided [FromJson] and [ToJson]
 /// functions.
 ///
-/// It requires the base path for the resource endpoint (e.g., '/users', '/products').
+/// It requires the model name (e.g., 'headline', 'category') to target the
+/// correct resource via the unified API endpoint.
 /// {@endtemplate}
 class HtDataApi<T> implements HtDataClient<T> {
   /// {@macro ht_data_api}
   const HtDataApi({
     required HtHttpClient httpClient,
-    required String endpointPath,
+    required String modelName,
     required FromJson<T> fromJson,
     required ToJson<T> toJson,
   })  : _httpClient = httpClient,
-        _endpointPath = endpointPath,
+        _modelName = modelName,
         _fromJson = fromJson,
         _toJson = toJson;
 
+  /// The base path for the unified data API endpoint.
+  static const String _basePath = '/api/v1/data';
+
   final HtHttpClient _httpClient;
-  final String _endpointPath;
+  final String _modelName;
   final FromJson<T> _fromJson;
   final ToJson<T> _toJson;
 
   /// Creates a new resource item of type [T].
   ///
-  /// Sends POST request to the base [_endpointPath] with the serialized [item].
+  /// Sends POST request to the unified [_basePath] with the serialized [item]
+  /// and the model name as a query parameter.
   /// Returns the created item, potentially populated with server-assigned data.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
@@ -43,8 +48,9 @@ class HtDataApi<T> implements HtDataClient<T> {
   Future<SuccessApiResponse<T>> create(T item) async {
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
     final responseData = await _httpClient.post<Map<String, dynamic>>(
-      _endpointPath,
+      _basePath,
       data: _toJson(item),
+      queryParameters: {'model': _modelName},
     );
     return SuccessApiResponse.fromJson(
       responseData,
@@ -54,7 +60,8 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads a single resource item of type [T] by its unique [id].
   ///
-  /// Sends a GET request to `[_endpointPath]/{id}`.
+  /// Sends a GET request to `[_basePath]/{id}` with the model name as a query
+  /// parameter.
   /// Returns the deserialized item.
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
@@ -65,7 +72,8 @@ class HtDataApi<T> implements HtDataClient<T> {
   Future<SuccessApiResponse<T>> read(String id) async {
     // Exceptions from _httpClient or _fromJson are allowed to propagate.
     final responseData = await _httpClient.get<Map<String, dynamic>>(
-      '$_endpointPath/$id',
+      '$_basePath/$id',
+      queryParameters: {'model': _modelName},
     );
     return SuccessApiResponse.fromJson(
       responseData,
@@ -75,8 +83,9 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads all resource items of type [T].
   ///
-  /// Sends a GET request to the base [_endpointPath]. Expects a JSON array.
-  /// Returns a list of deserialized items.
+  /// Sends a GET request to the unified [_basePath] with the model name and
+  /// pagination parameters as query parameters.
+  /// Returns a paginated list of deserialized items.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
   /// failure. Can also throw [FormatException] if the received data structure
@@ -89,12 +98,14 @@ class HtDataApi<T> implements HtDataClient<T> {
     int? limit,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
+    final queryParameters = <String, dynamic>{
+      'model': _modelName,
+      if (startAfterId != null) 'startAfterId': startAfterId,
+      if (limit != null) 'limit': limit,
+    };
     final responseData = await _httpClient.get<Map<String, dynamic>>(
-      _endpointPath,
-      queryParameters: {
-        if (startAfterId != null) 'startAfterId': startAfterId,
-        if (limit != null) 'limit': limit,
-      },
+      _basePath,
+      queryParameters: queryParameters,
     );
 
     return SuccessApiResponse.fromJson(
@@ -120,11 +131,11 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads multiple resource items of type [T] based on a [query].
   ///
-  /// Sends a GET request to the base [_endpointPath] with the
-  /// provided [query] parameters and optional pagination
-  /// parameters ([startAfterId], [limit]).
+  /// Sends a GET request to the unified [_basePath] with the model name,
+  /// provided [query] parameters, and optional pagination parameters
+  /// ([startAfterId], [limit]).
   ///
-  /// Returns a list of deserialized items matching the query.
+  /// Returns a paginated list of deserialized items matching the query.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
   /// failure. Can also throw [FormatException] if the received data structure
@@ -138,13 +149,15 @@ class HtDataApi<T> implements HtDataClient<T> {
     int? limit,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
+    final queryParameters = <String, dynamic>{
+      'model': _modelName,
+      ...query,
+      if (startAfterId != null) 'startAfterId': startAfterId,
+      if (limit != null) 'limit': limit,
+    };
     final responseData = await _httpClient.get<Map<String, dynamic>>(
-      _endpointPath,
-      queryParameters: {
-        ...query,
-        if (startAfterId != null) 'startAfterId': startAfterId,
-        if (limit != null) 'limit': limit,
-      },
+      _basePath,
+      queryParameters: queryParameters,
     );
 
     return SuccessApiResponse.fromJson(
@@ -170,7 +183,8 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Updates an existing resource item of type [T] identified by [id].
   ///
-  /// Sends a PUT request to `[_endpointPath]/{id}` with the serialized [item].
+  /// Sends a PUT request to `[_basePath]/{id}` with the serialized [item]
+  /// and the model name as a query parameter.
   /// Returns the updated item as returned by the server.
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
@@ -181,8 +195,9 @@ class HtDataApi<T> implements HtDataClient<T> {
   Future<SuccessApiResponse<T>> update(String id, T item) async {
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
     final responseData = await _httpClient.put<Map<String, dynamic>>(
-      '$_endpointPath/$id',
+      '$_basePath/$id',
       data: _toJson(item),
+      queryParameters: {'model': _modelName},
     );
     return SuccessApiResponse.fromJson(
       responseData,
@@ -192,7 +207,8 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Deletes a resource item identified by [id].
   ///
-  /// Sends a DELETE request to `[_endpointPath]/{id}`. Returns `void`.
+  /// Sends a DELETE request to `[_basePath]/{id}` with the model name as a
+  /// query parameter. Returns `void`.
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
   /// underlying HTTP communication failure. These exceptions are intended to be
@@ -201,6 +217,9 @@ class HtDataApi<T> implements HtDataClient<T> {
   Future<void> delete(String id) async {
     // Exceptions from _httpClient are allowed to propagate.
     // We expect no content, but use <dynamic> for flexibility.
-    await _httpClient.delete<dynamic>('$_endpointPath/$id');
+    await _httpClient.delete<dynamic>(
+      '$_basePath/$id',
+      queryParameters: {'model': _modelName},
+    );
   }
 }
