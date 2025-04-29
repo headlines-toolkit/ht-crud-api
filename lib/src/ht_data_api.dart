@@ -36,9 +36,14 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Creates a new resource item of type [T].
   ///
-  /// Sends POST request to the unified [_basePath] with the serialized [item]
-  /// and the model name as a query parameter.
-  /// Returns the created item, potentially populated with server-assigned data.
+  /// Sends a POST request to the unified API endpoint `[_basePath]` with
+  /// the serialized [item] data and the `model` query parameter set to
+  /// [_modelName].
+  ///
+  /// Example Request: `POST /api/v1/data?model=headline`
+  ///
+  /// Returns a [SuccessApiResponse] containing the created item, potentially
+  /// populated with server-assigned data (like an ID).
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
   /// failure. Exceptions during serialization ([_toJson]) or deserialization
@@ -60,9 +65,12 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads a single resource item of type [T] by its unique [id].
   ///
-  /// Sends a GET request to `[_basePath]/{id}` with the model name as a query
-  /// parameter.
-  /// Returns the deserialized item.
+  /// Sends a GET request to the item-specific API endpoint `[_basePath]/{id}`
+  /// with the `model` query parameter set to [_modelName].
+  ///
+  /// Example Request: `GET /api/v1/data/some-item-id?model=category`
+  ///
+  /// Returns a [SuccessApiResponse] containing the deserialized item.
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
   /// underlying HTTP communication failure. Exceptions during deserialization
@@ -81,11 +89,17 @@ class HtDataApi<T> implements HtDataClient<T> {
     );
   }
 
-  /// Reads all resource items of type [T].
+  /// Reads all resource items of type [T], supporting pagination.
   ///
-  /// Sends a GET request to the unified [_basePath] with the model name and
-  /// pagination parameters as query parameters.
-  /// Returns a paginated list of deserialized items.
+  /// Sends a GET request to the unified API endpoint `[_basePath]` with the
+  /// `model` query parameter set to [_modelName]. Optional pagination
+  /// parameters [startAfterId] and [limit] can be provided.
+  ///
+  /// Example Request (first page): `GET /api/v1/data?model=source&limit=20`
+  /// Example Request (next page): `GET /api/v1/data?model=source&startAfterId=last-source-id&limit=20`
+  ///
+  /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
+  /// list of deserialized items and pagination details.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
   /// failure. Can also throw [FormatException] if the received data structure
@@ -129,19 +143,24 @@ class HtDataApi<T> implements HtDataClient<T> {
     );
   }
 
-  /// Reads multiple resource items of type [T] based on a [query].
+  /// Reads multiple resource items of type [T] based on a [query], supporting
+  /// pagination.
   ///
-  /// Sends a GET request to the unified [_basePath] with the model name,
-  /// provided [query] parameters, and optional pagination parameters
-  /// ([startAfterId], [limit]).
+  /// Sends a GET request to the unified API endpoint `[_basePath]` with the
+  /// `model` query parameter set to [_modelName], the provided [query] map,
+  /// and optional pagination parameters ([startAfterId], [limit]).
   ///
-  /// Returns a paginated list of deserialized items matching the query.
+  /// Example Request:
+  /// `GET /api/v1/data?model=headline&category=tech&country=US&limit=10`
   ///
-  /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
-  /// failure. Can also throw [FormatException] if the received data structure
-  /// is incorrect (e.g., list item is not a Map) or other exceptions during
-  /// deserialization ([_fromJson]). These exceptions are intended to be handled
-  /// by the caller.
+  /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
+  /// list of deserialized items matching the query and pagination details.
+  ///
+  /// Throws [HtHttpException] or its subtypes (e.g., [BadRequestException] for
+  /// invalid query parameters) on underlying HTTP communication failure. Can
+  /// also throw [FormatException] if the received data structure is incorrect
+  /// or other exceptions during deserialization ([_fromJson]). These exceptions
+  /// are intended to be handled by the caller.
   @override
   Future<SuccessApiResponse<PaginatedResponse<T>>> readAllByQuery(
     Map<String, dynamic> query, {
@@ -183,9 +202,14 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Updates an existing resource item of type [T] identified by [id].
   ///
-  /// Sends a PUT request to `[_basePath]/{id}` with the serialized [item]
-  /// and the model name as a query parameter.
-  /// Returns the updated item as returned by the server.
+  /// Sends a PUT request to the item-specific API endpoint `[_basePath]/{id}`
+  /// with the serialized [item] data and the `model` query parameter set to
+  /// [_modelName].
+  ///
+  /// Example Request: `PUT /api/v1/data/some-item-id?model=category`
+  ///
+  /// Returns a [SuccessApiResponse] containing the updated item as confirmed
+  /// by the server.
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
   /// underlying HTTP communication failure. Exceptions during serialization
@@ -207,8 +231,12 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Deletes a resource item identified by [id].
   ///
-  /// Sends a DELETE request to `[_basePath]/{id}` with the model name as a
-  /// query parameter. Returns `void`.
+  /// Sends a DELETE request to the item-specific API endpoint `[_basePath]/{id}`
+  /// with the `model` query parameter set to [_modelName].
+  /// Returns `void` upon successful deletion (typically indicated by a 204
+  /// No Content response).
+  ///
+  /// Example Request: `DELETE /api/v1/data/some-item-id?model=source`
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
   /// underlying HTTP communication failure. These exceptions are intended to be
