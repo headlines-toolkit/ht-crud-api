@@ -31,7 +31,7 @@ Then run `dart pub get` or `flutter pub get`.
 *   Implements list retrieval methods (`readAll`, `readAllByQuery`) returning `Future<SuccessApiResponse<PaginatedResponse<T>>>`.
 *   Implements `delete` returning `Future<void>`.
 *   Requires an instance of `HtHttpClient` for making HTTP requests.
-*   Configurable with endpoint path and `fromJson`/`toJson` functions for the specific model `T`.
+*   Configurable with the `modelName` (identifying the resource) and `fromJson`/`toJson` functions for the specific model `T`.
 *   Propagates `HtHttpException` errors from the underlying `HtHttpClient`.
 *   Includes comprehensive unit tests with 100% coverage.
 
@@ -76,12 +76,12 @@ Then run `dart pub get` or `flutter pub get`.
     );
     ```
 
-3.  **Instantiate `HtDataApi`:** Create an instance specific to your model and endpoint.
+3.  **Instantiate `HtDataApi`:** Create an instance specific to your model, providing the `modelName` used in the unified API endpoint.
 
     ```dart
     final myModelApi = HtDataApi<MyModel>(
       httpClient: httpClient,
-      endpointPath: '/my-models', // Your specific API path
+      modelName: 'my-models', // The name identifying this resource in the API
       fromJson: MyModel.fromJson, // Reference to your fromJson factory/function
       toJson: (model) => model.toJson(), // Reference to your toJson method/function
     );
