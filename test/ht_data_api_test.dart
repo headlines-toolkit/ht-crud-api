@@ -336,8 +336,8 @@ void main() {
 
       // Updated helper to return enveloped paginated response
       void stubGetAllSuccess({
+        required Map<String, dynamic> queryParameters,
         List<dynamic> items = const [],
-        required Map<String, dynamic> queryParameters, // Now required
         bool hasMore = false,
         String? cursor,
       }) {
@@ -426,7 +426,10 @@ void main() {
 
       test('should throw HtHttpException when httpClient.get fails', () async {
         const exception = ServerException('Server error');
-        stubGetAllFailure(exception: exception, queryParameters: baseQueryParams);
+        stubGetAllFailure(
+          exception: exception,
+          queryParameters: baseQueryParams,
+        );
         expect(() => htDataApi.readAll(), throwsA(isA<ServerException>()));
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
@@ -493,7 +496,10 @@ void main() {
         'should throw generic Exception when httpClient throws generic error',
         () async {
           final exception = genericException;
-          stubGetAllFailure(exception: exception, queryParameters: baseQueryParams);
+          stubGetAllFailure(
+            exception: exception,
+            queryParameters: baseQueryParams,
+          );
           expect(
             () => htDataApi.readAll(),
             throwsA(
@@ -568,7 +574,8 @@ void main() {
           items: testModelListJson,
           queryParameters: combinedQuery, // Use combined query
         );
-        final result = await htDataApi.readAllByQuery(testUserQuery); // Pass user query
+        final result =
+            await htDataApi.readAllByQuery(testUserQuery); // Pass user query
         expect(
           result,
           isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
@@ -588,7 +595,8 @@ void main() {
           'on success', () async {
         stubGetByQuerySuccess(
           items: testModelListJson,
-          queryParameters: combinedQueryWithPagination, // Use combined+pagination
+          queryParameters:
+              combinedQueryWithPagination, // Use combined+pagination
           hasMore: true,
         );
         final result = await htDataApi.readAllByQuery(
@@ -605,7 +613,8 @@ void main() {
         verify(
           () => mockHttpClient.get<Map<String, dynamic>>(
             testBasePath, // Verify base path
-            queryParameters: combinedQueryWithPagination, // Verify combined+pagination
+            queryParameters:
+                combinedQueryWithPagination, // Verify combined+pagination
           ),
         ).called(1);
       });
@@ -666,7 +675,8 @@ void main() {
             queryParameters: combinedQuery, // Use combined query
           );
           expect(
-            () => htDataApiFromJsonThrows.readAllByQuery(testUserQuery), // Pass user query
+            () => htDataApiFromJsonThrows
+                .readAllByQuery(testUserQuery), // Pass user query
             throwsA(
               isA<Exception>().having(
                 (e) => e.toString(),
@@ -799,31 +809,31 @@ void main() {
         () async {
           final exception = genericException;
           // Stub with the original model being sent
-        when(
-          () => mockHttpClient.put<Map<String, dynamic>>(
-            path,
-            data: testModelJson,
-            queryParameters: queryParams, // Add query param
-          ),
-        ).thenThrow(exception);
-
-        expect(
-          () => htDataApi.update(testId, testModel),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'message',
-              'Exception: Something unexpected happened',
+          when(
+            () => mockHttpClient.put<Map<String, dynamic>>(
+              path,
+              data: testModelJson,
+              queryParameters: queryParams, // Add query param
             ),
-          ),
-        );
-        verify(
-          () => mockHttpClient.put<Map<String, dynamic>>(
-            path,
-            data: testModelJson,
-            queryParameters: queryParams, // Verify query param
-          ),
-        ).called(1);
+          ).thenThrow(exception);
+
+          expect(
+            () => htDataApi.update(testId, testModel),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'message',
+                'Exception: Something unexpected happened',
+              ),
+            ),
+          );
+          verify(
+            () => mockHttpClient.put<Map<String, dynamic>>(
+              path,
+              data: testModelJson,
+              queryParameters: queryParams, // Verify query param
+            ),
+          ).called(1);
         },
       );
     });
