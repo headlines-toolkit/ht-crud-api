@@ -93,43 +93,121 @@ Then run `dart pub get` or `flutter pub get`.
     try {
       // Create
       final newModelData = MyModel(id: '', name: 'New Item'); // ID might be ignored by API
-      final createResponse = await myModelApi.create(newModelData);
-      final createdModel = createResponse.data; // Access data from envelope
-      print('Created: ${createdModel.id}');
+      // Example: Create a new item (global)
+      final createResponseGlobal = await myModelApi.create(item: newModelData);
+      final createdModelGlobal = createResponseGlobal.data; // Access data from envelope
+      print('Created (Global): ${createdModelGlobal.id}');
+
+      // Example: Create a new item for a specific user
+      const userId = 'some-user-id'; // Replace with actual user ID
+      final createResponseUser = await myModelApi.create(
+        item: newModelData.copyWith(id: ''), // Ensure new ID for user-scoped
+        userId: userId,
+      );
+      final createdModelUser = createResponseUser.data; // Access data from envelope
+      print('Created (User $userId): ${createdModelUser.id}');
 
       // Read All
-      final readAllResponse = await myModelApi.readAll();
-      final allModels = readAllResponse.data.items; // Access items from paginated data
-      print('Found ${allModels.length} models.');
-      print('Has more: ${readAllResponse.data.hasMore}');
+      // Example: Read all items (global)
+      final readAllResponseGlobal = await myModelApi.readAll();
+      final allModelsGlobal = readAllResponseGlobal.data.items; // Access items from paginated data
+      print('Found ${allModelsGlobal.length} models (Global).');
+      print('Has more (Global): ${readAllResponseGlobal.data.hasMore}');
+
+      // Example: Read all items for a specific user
+      final readAllResponseUser = await myModelApi.readAll(userId: userId);
+      final allModelsUser = readAllResponseUser.data.items; // Access items from paginated data
+      print('Found ${allModelsUser.length} models (User $userId).');
+      print('Has more (User $userId): ${readAllResponseUser.data.hasMore}');
+
+      // Example: Read all items with pagination (global)
+      final readAllPaginatedGlobal = await myModelApi.readAll(
+        startAfterId: 'last-item-id', // Replace with actual last item ID
+        limit: 10,
+      );
+      print('Found ${readAllPaginatedGlobal.data.items.length} models (Paginated Global).');
+
+      // Example: Read all items with pagination for a specific user
+      final readAllPaginatedUser = await myModelApi.readAll(
+        userId: userId,
+        startAfterId: 'last-item-id', // Replace with actual last item ID
+        limit: 10,
+      );
+      print('Found ${readAllPaginatedUser.data.items.length} models (Paginated User $userId).');
+
 
       // Read All by Query
-      final queryResponse = await myModelApi.readAllByQuery({
+      final query = {
         'name': 'New Item',
         'limit': 1,
-      });
-      final queryResults = queryResponse.data.items; // Access items
-      print('Found ${queryResults.length} models matching query.');
-      if (queryResults.isNotEmpty) {
-        print('First query result: ${queryResults.first.name}');
+      };
+      // Example: Read all by query (global)
+      final queryResponseGlobal = await myModelApi.readAllByQuery(query);
+      final queryResultsGlobal = queryResponseGlobal.data.items; // Access items
+      print('Found ${queryResultsGlobal.length} models matching query (Global).');
+      if (queryResultsGlobal.isNotEmpty) {
+        print('First query result (Global): ${queryResultsGlobal.first.name}');
+      }
+
+      // Example: Read all by query for a specific user
+      final queryResponseUser = await myModelApi.readAllByQuery(
+        query,
+        userId: userId,
+      );
+      final queryResultsUser = queryResponseUser.data.items; // Access items
+      print('Found ${queryResultsUser.length} models matching query (User $userId).');
+      if (queryResultsUser.isNotEmpty) {
+        print('First query result (User $userId): ${queryResultsUser.first.name}');
       }
 
       // Read One
-      if (allModels.isNotEmpty) {
-        final firstModelId = allModels.first.id;
-        final readResponse = await myModelApi.read(firstModelId);
-        final fetchedModel = readResponse.data; // Access data from envelope
-        print('Fetched: ${fetchedModel.name}');
+      if (allModelsGlobal.isNotEmpty) {
+        final firstModelId = allModelsGlobal.first.id;
+        // Example: Read one item by ID (global)
+        final readResponseGlobal = await myModelApi.read(id: firstModelId);
+        final fetchedModelGlobal = readResponseGlobal.data; // Access data from envelope
+        print('Fetched (Global): ${fetchedModelGlobal.name}');
+
+        // Example: Read one item by ID for a specific user
+        // (Assuming the user has an item with this ID)
+        final readResponseUser = await myModelApi.read(
+          id: firstModelId,
+          userId: userId,
+        );
+        final fetchedModelUser = readResponseUser.data; // Access data from envelope
+        print('Fetched (User $userId): ${fetchedModelUser.name}');
+
 
         // Update
         final updatedData = MyModel(id: firstModelId, name: 'Updated Name');
-        final updateResponse = await myModelApi.update(firstModelId, updatedData);
-        final updatedModel = updateResponse.data; // Access data from envelope
-        print('Updated: ${updatedModel.name}');
+        // Example: Update an item (global)
+        final updateResponseGlobal = await myModelApi.update(
+          id: firstModelId,
+          item: updatedData,
+        );
+        final updatedModelGlobal = updateResponseGlobal.data; // Access data from envelope
+        print('Updated (Global): ${updatedModelGlobal.name}');
+
+        // Example: Update an item for a specific user
+        // (Assuming the user has an item with this ID)
+        final updateResponseUser = await myModelApi.update(
+          id: firstModelId,
+          item: updatedData,
+          userId: userId,
+        );
+        final updatedModelUser = updateResponseUser.data; // Access data from envelope
+        print('Updated (User $userId): ${updatedModelUser.name}');
+
 
         // Delete (no change in return type)
-        await myModelApi.delete(firstModelId);
-        print('Deleted model with ID: $firstModelId');
+        // Example: Delete an item (global)
+        await myModelApi.delete(id: firstModelId);
+        print('Deleted model with ID (Global): $firstModelId');
+
+        // Example: Delete an item for a specific user
+        // (Assuming the user has an item with this ID)
+        // await myModelApi.delete(id: firstModelId, userId: userId);
+        // print('Deleted model with ID (User $userId): $firstModelId');
       }
     } on HtHttpException catch (e) {
       // Handle specific HTTP errors from ht_http_client

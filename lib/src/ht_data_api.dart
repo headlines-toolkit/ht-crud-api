@@ -36,11 +36,18 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Creates a new resource item of type [T].
   ///
+  /// - [userId]: The unique identifier of the user performing the operation.
+  ///   If `null`, the operation may be considered a global creation (e.g.,
+  ///   by an admin), depending on the resource type [T]. Implementations
+  ///   must handle the `null` case appropriately.
+  /// - [item]: The resource item to create.
+  ///
   /// Sends a POST request to the unified API endpoint `[_basePath]` with
   /// the serialized [item] data and the `model` query parameter set to
-  /// [_modelName].
+  /// [_modelName]. Includes the `userId` query parameter if provided.
   ///
-  /// Example Request: `POST /api/v1/data?model=headline`
+  /// Example Request (user-scoped): `POST /api/v1/data?model=headline&userId=user123`
+  /// Example Request (global): `POST /api/v1/data?model=headline`
   ///
   /// Returns a [SuccessApiResponse] containing the created item, potentially
   /// populated with server-assigned data (like an ID).
@@ -50,12 +57,19 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// ([_fromJson]) will also propagate. These exceptions are intended to be
   /// handled by the caller (e.g., Repository or BLoC layer).
   @override
-  Future<SuccessApiResponse<T>> create(T item) async {
+  Future<SuccessApiResponse<T>> create({
+    required T item,
+    String? userId,
+  }) async {
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
+    final queryParameters = <String, dynamic>{
+      'model': _modelName,
+      if (userId != null) 'userId': userId,
+    };
     final responseData = await _httpClient.post<Map<String, dynamic>>(
       _basePath,
       data: _toJson(item),
-      queryParameters: {'model': _modelName},
+      queryParameters: queryParameters,
     );
     return SuccessApiResponse.fromJson(
       responseData,
@@ -65,10 +79,17 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads a single resource item of type [T] by its unique [id].
   ///
-  /// Sends a GET request to the item-specific API endpoint `[_basePath]/{id}`
-  /// with the `model` query parameter set to [_modelName].
+  /// - [userId]: The unique identifier of the user performing the operation.
+  ///   If `null`, the operation may be considered a global read, depending
+  ///   on the resource type [T]. Implementations must handle the `null` case.
+  /// - [id]: The unique identifier of the resource item to read.
   ///
-  /// Example Request: `GET /api/v1/data/some-item-id?model=category`
+  /// Sends a GET request to the item-specific API endpoint `[_basePath]/{id}`
+  /// with the `model` query parameter set to [_modelName]. Includes the
+  /// `userId` query parameter if provided.
+  ///
+  /// Example Request (user-scoped): `GET /api/v1/data/some-item-id?model=category&userId=user123`
+  /// Example Request (global): `GET /api/v1/data/some-item-id?model=category`
   ///
   /// Returns a [SuccessApiResponse] containing the deserialized item.
   ///
@@ -77,11 +98,18 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// ([_fromJson]) will also propagate. These exceptions are intended to be
   /// handled by the caller.
   @override
-  Future<SuccessApiResponse<T>> read(String id) async {
+  Future<SuccessApiResponse<T>> read({
+    required String id,
+    String? userId,
+  }) async {
     // Exceptions from _httpClient or _fromJson are allowed to propagate.
+    final queryParameters = <String, dynamic>{
+      'model': _modelName,
+      if (userId != null) 'userId': userId,
+    };
     final responseData = await _httpClient.get<Map<String, dynamic>>(
       '$_basePath/$id',
-      queryParameters: {'model': _modelName},
+      queryParameters: queryParameters,
     );
     return SuccessApiResponse.fromJson(
       responseData,
@@ -91,12 +119,20 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Reads all resource items of type [T], supporting pagination.
   ///
-  /// Sends a GET request to the unified API endpoint `[_basePath]` with the
-  /// `model` query parameter set to [_modelName]. Optional pagination
-  /// parameters [startAfterId] and [limit] can be provided.
+  /// - [userId]: The unique identifier of the user performing the operation.
+  ///   If `null`, the operation should retrieve all *global* resources of type [T].
+  ///   If provided, the operation should retrieve all resources scoped to that user.
+  ///   Implementations must handle the `null` case.
+  /// - [startAfterId]: Optional ID to start pagination after.
+  /// - [limit]: Optional maximum number of items to return.
   ///
-  /// Example Request (first page): `GET /api/v1/data?model=source&limit=20`
-  /// Example Request (next page): `GET /api/v1/data?model=source&startAfterId=last-source-id&limit=20`
+  /// Sends a GET request to the unified API endpoint `[_basePath]` with the
+  /// `model` query parameter set to [_modelName]. Includes the `userId` query
+  /// parameter if provided, and optional pagination parameters [startAfterId]
+  /// and [limit].
+  ///
+  /// Example Request (user-scoped, first page): `GET /api/v1/data?model=source&userId=user123&limit=20`
+  /// Example Request (global, next page): `GET /api/v1/data?model=source&startAfterId=last-source-id&limit=20`
   ///
   /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
   /// list of deserialized items and pagination details.
@@ -108,12 +144,14 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// by the caller.
   @override
   Future<SuccessApiResponse<PaginatedResponse<T>>> readAll({
+    String? userId,
     String? startAfterId,
     int? limit,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
+      if (userId != null) 'userId': userId,
       if (startAfterId != null) 'startAfterId': startAfterId,
       if (limit != null) 'limit': limit,
     };
@@ -132,8 +170,6 @@ class HtDataApi<T> implements HtDataClient<T> {
             return _fromJson(itemJson);
           } else {
             throw FormatException(
-              //
-              // ignore: lines_longer_than_80_chars
               'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
               itemJson,
             );
@@ -146,11 +182,22 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// Reads multiple resource items of type [T] based on a [query], supporting
   /// pagination.
   ///
+  /// - [userId]: The unique identifier of the user performing the operation.
+  ///   If `null`, the operation should retrieve *global* resources matching the
+  ///   query. If provided, the operation should retrieve resources scoped to
+  ///   that user matching the query. Implementations must handle the `null` case.
+  /// - [query]: Map of query parameters to filter results.
+  /// - [startAfterId]: Optional ID to start pagination after.
+  /// - [limit]: Optional maximum number of items to return.
+  ///
   /// Sends a GET request to the unified API endpoint `[_basePath]` with the
   /// `model` query parameter set to [_modelName], the provided [query] map,
-  /// and optional pagination parameters ([startAfterId], [limit]).
+  /// and optional pagination parameters ([startAfterId], [limit]). Includes
+  /// the `userId` query parameter if provided.
   ///
-  /// Example Request:
+  /// Example Request (user-scoped):
+  /// `GET /api/v1/data?model=headline&userId=user123&category=tech&country=US&limit=10`
+  /// Example Request (global):
   /// `GET /api/v1/data?model=headline&category=tech&country=US&limit=10`
   ///
   /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
@@ -164,12 +211,14 @@ class HtDataApi<T> implements HtDataClient<T> {
   @override
   Future<SuccessApiResponse<PaginatedResponse<T>>> readAllByQuery(
     Map<String, dynamic> query, {
+    String? userId,
     String? startAfterId,
     int? limit,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
+      if (userId != null) 'userId': userId,
       ...query,
       if (startAfterId != null) 'startAfterId': startAfterId,
       if (limit != null) 'limit': limit,
@@ -189,8 +238,6 @@ class HtDataApi<T> implements HtDataClient<T> {
             return _fromJson(itemJson);
           } else {
             throw FormatException(
-              //
-              // ignore: lines_longer_than_80_chars
               'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
               itemJson,
             );
@@ -202,11 +249,19 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Updates an existing resource item of type [T] identified by [id].
   ///
+  /// - [userId]: The unique identifier of the user performing the operation.
+  ///   If `null`, the operation may be considered a global update (e.g.,
+  ///   by an admin), depending on the resource type [T]. Implementations
+  ///   must handle the `null` case appropriately.
+  /// - [id]: The unique identifier of the resource item to update.
+  /// - [item]: The updated resource item data.
+  ///
   /// Sends a PUT request to the item-specific API endpoint `[_basePath]/{id}`
   /// with the serialized [item] data and the `model` query parameter set to
-  /// [_modelName].
+  /// [_modelName]. Includes the `userId` query parameter if provided.
   ///
-  /// Example Request: `PUT /api/v1/data/some-item-id?model=category`
+  /// Example Request (user-scoped): `PUT /api/v1/data/some-item-id?model=category&userId=user123`
+  /// Example Request (global): `PUT /api/v1/data/some-item-id?model=category`
   ///
   /// Returns a [SuccessApiResponse] containing the updated item as confirmed
   /// by the server.
@@ -216,12 +271,20 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// ([_toJson]) or deserialization ([_fromJson]) will also propagate. These
   /// exceptions are intended to be handled by the caller.
   @override
-  Future<SuccessApiResponse<T>> update(String id, T item) async {
+  Future<SuccessApiResponse<T>> update({
+    required String id,
+    required T item,
+    String? userId,
+  }) async {
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
+    final queryParameters = <String, dynamic>{
+      'model': _modelName,
+      if (userId != null) 'userId': userId,
+    };
     final responseData = await _httpClient.put<Map<String, dynamic>>(
       '$_basePath/$id',
       data: _toJson(item),
-      queryParameters: {'model': _modelName},
+      queryParameters: queryParameters,
     );
     return SuccessApiResponse.fromJson(
       responseData,
@@ -231,23 +294,38 @@ class HtDataApi<T> implements HtDataClient<T> {
 
   /// Deletes a resource item identified by [id].
   ///
+  /// - [userId]: The unique identifier of the user performing the operation.
+  ///   If `null`, the operation may be considered a global delete (e.g.,
+  ///   by an admin), depending on the resource type [T]. Implementations
+  ///   must handle the `null` case appropriately.
+  /// - [id]: The unique identifier of the resource item to delete.
+  ///
   /// Sends a DELETE request to the item-specific API endpoint `[_basePath]/{id}`
-  /// with the `model` query parameter set to [_modelName].
+  /// with the `model` query parameter set to [_modelName]. Includes the
+  /// `userId` query parameter if provided.
   /// Returns `void` upon successful deletion (typically indicated by a 204
   /// No Content response).
   ///
-  /// Example Request: `DELETE /api/v1/data/some-item-id?model=source`
+  /// Example Request (user-scoped): `DELETE /api/v1/data/some-item-id?model=source&userId=user123`
+  /// Example Request (global): `DELETE /api/v1/data/some-item-id?model=source`
   ///
   /// Throws [HtHttpException] or its subtypes (e.g., [NotFoundException]) on
   /// underlying HTTP communication failure. These exceptions are intended to be
   /// handled by the caller.
   @override
-  Future<void> delete(String id) async {
+  Future<void> delete({
+    required String id,
+    String? userId,
+  }) async {
     // Exceptions from _httpClient are allowed to propagate.
     // We expect no content, but use <dynamic> for flexibility.
+    final queryParameters = <String, dynamic>{
+      'model': _modelName,
+      if (userId != null) 'userId': userId,
+    };
     await _httpClient.delete<dynamic>(
       '$_basePath/$id',
-      queryParameters: {'model': _modelName},
+      queryParameters: queryParameters,
     );
   }
 }
