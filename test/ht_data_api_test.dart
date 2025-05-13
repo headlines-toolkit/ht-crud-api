@@ -215,8 +215,10 @@ void main() {
         'should throw HtHttpException when httpClient.post fails with userId',
         () async {
           const exception = BadRequestException('Invalid data');
-          stubPostFailure(exception,
-              queryParameters: testUserScopedQueryParams);
+          stubPostFailure(
+            exception,
+            queryParameters: testUserScopedQueryParams,
+          );
           expect(
             () => htDataApi.create(item: testModel, userId: testUserId),
             throwsA(isA<BadRequestException>()),
