@@ -216,10 +216,22 @@ class HtDataApi<T> implements HtDataClient<T> {
     int? limit,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
+    // Process the input query map for list-to-string conversion and 'query' to 'q' renaming
+    final Map<String, dynamic> processedQueryInput = {};
+    for (final entry in query.entries) {
+      final key = entry.key == 'query' ? 'q' : entry.key;
+      final value = entry.value;
+      if (value is List) {
+        processedQueryInput[key] = value.map((e) => e.toString()).join(',');
+      } else {
+        processedQueryInput[key] = value;
+      }
+    }
+
     final queryParameters = <String, dynamic>{
       'model': _modelName,
       if (userId != null) 'userId': userId,
-      ...query,
+      ...processedQueryInput,
       if (startAfterId != null) 'startAfterId': startAfterId,
       if (limit != null) 'limit': limit,
     };
