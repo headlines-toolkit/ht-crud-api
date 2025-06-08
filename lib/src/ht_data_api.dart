@@ -21,10 +21,10 @@ class HtDataApi<T> implements HtDataClient<T> {
     required String modelName,
     required FromJson<T> fromJson,
     required ToJson<T> toJson,
-  })  : _httpClient = httpClient,
-        _modelName = modelName,
-        _fromJson = fromJson,
-        _toJson = toJson;
+  }) : _httpClient = httpClient,
+       _modelName = modelName,
+       _fromJson = fromJson,
+       _toJson = toJson;
 
   /// The base path for the unified data API endpoint.
   static const String _basePath = '/api/v1/data';
@@ -162,20 +162,19 @@ class HtDataApi<T> implements HtDataClient<T> {
 
     return SuccessApiResponse.fromJson(
       responseData,
-      (json) => PaginatedResponse.fromJson(
-        json! as Map<String, dynamic>,
-        (itemJson) {
-          // Add type check for robustness against malformed API responses
-          if (itemJson is Map<String, dynamic>) {
-            return _fromJson(itemJson);
-          } else {
-            throw FormatException(
-              'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
-              itemJson,
-            );
-          }
-        },
-      ),
+      (json) => PaginatedResponse.fromJson(json! as Map<String, dynamic>, (
+        itemJson,
+      ) {
+        // Add type check for robustness against malformed API responses
+        if (itemJson is Map<String, dynamic>) {
+          return _fromJson(itemJson);
+        } else {
+          throw FormatException(
+            'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
+            itemJson,
+          );
+        }
+      }),
     );
   }
 
@@ -242,20 +241,19 @@ class HtDataApi<T> implements HtDataClient<T> {
 
     return SuccessApiResponse.fromJson(
       responseData,
-      (json) => PaginatedResponse.fromJson(
-        json! as Map<String, dynamic>,
-        (itemJson) {
-          // Add type check for robustness against malformed API responses
-          if (itemJson is Map<String, dynamic>) {
-            return _fromJson(itemJson);
-          } else {
-            throw FormatException(
-              'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
-              itemJson,
-            );
-          }
-        },
-      ),
+      (json) => PaginatedResponse.fromJson(json! as Map<String, dynamic>, (
+        itemJson,
+      ) {
+        // Add type check for robustness against malformed API responses
+        if (itemJson is Map<String, dynamic>) {
+          return _fromJson(itemJson);
+        } else {
+          throw FormatException(
+            'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
+            itemJson,
+          );
+        }
+      }),
     );
   }
 
@@ -325,10 +323,7 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// underlying HTTP communication failure. These exceptions are intended to be
   /// handled by the caller.
   @override
-  Future<void> delete({
-    required String id,
-    String? userId,
-  }) async {
+  Future<void> delete({required String id, String? userId}) async {
     // Exceptions from _httpClient are allowed to propagate.
     // We expect no content, but use <dynamic> for flexibility.
     final queryParameters = <String, dynamic>{
