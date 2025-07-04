@@ -125,14 +125,15 @@ class HtDataApi<T> implements HtDataClient<T> {
   ///   Implementations must handle the `null` case.
   /// - [startAfterId]: Optional ID to start pagination after.
   /// - [limit]: Optional maximum number of items to return.
+  /// - [sortBy]: Optional field name to sort the results by.
+  /// - [sortOrder]: Optional direction for sorting (`asc` or `desc`).
   ///
   /// Sends a GET request to the unified API endpoint `[_basePath]` with the
   /// `model` query parameter set to [_modelName]. Includes the `userId` query
-  /// parameter if provided, and optional pagination parameters [startAfterId]
-  /// and [limit].
+  /// parameter if provided, and optional pagination and sorting parameters.
   ///
   /// Example Request (user-scoped, first page): `GET /api/v1/data?model=source&userId=user123&limit=20`
-  /// Example Request (global, next page): `GET /api/v1/data?model=source&startAfterId=last-source-id&limit=20`
+  /// Example Request (global, sorted): `GET /api/v1/data?model=source&sortBy=name&sortOrder=asc`
   ///
   /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
   /// list of deserialized items and pagination details.
@@ -147,6 +148,8 @@ class HtDataApi<T> implements HtDataClient<T> {
     String? userId,
     String? startAfterId,
     int? limit,
+    String? sortBy,
+    SortOrder? sortOrder,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
     final queryParameters = <String, dynamic>{
@@ -154,6 +157,8 @@ class HtDataApi<T> implements HtDataClient<T> {
       if (userId != null) 'userId': userId,
       if (startAfterId != null) 'startAfterId': startAfterId,
       if (limit != null) 'limit': limit,
+      if (sortBy != null) 'sortBy': sortBy,
+      if (sortOrder != null) 'sortOrder': sortOrder.name,
     };
     final responseData = await _httpClient.get<Map<String, dynamic>>(
       _basePath,
@@ -188,14 +193,16 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// - [query]: Map of query parameters to filter results.
   /// - [startAfterId]: Optional ID to start pagination after.
   /// - [limit]: Optional maximum number of items to return.
+  /// - [sortBy]: Optional field name to sort the results by.
+  /// - [sortOrder]: Optional direction for sorting (`asc` or `desc`).
   ///
   /// Sends a GET request to the unified API endpoint `[_basePath]` with the
   /// `model` query parameter set to [_modelName], the provided [query] map,
-  /// and optional pagination parameters ([startAfterId], [limit]). Includes
-  /// the `userId` query parameter if provided.
+  /// and optional pagination and sorting parameters. Includes the `userId`
+  /// query parameter if provided.
   ///
   /// Example Request (user-scoped):
-  /// `GET /api/v1/data?model=headline&userId=user123&category=tech&country=US&limit=10`
+  /// `GET /api/v1/data?model=headline&userId=user123&category=tech&sortBy=publishedAt&sortOrder=desc`
   /// Example Request (global):
   /// `GET /api/v1/data?model=headline&category=tech&country=US&limit=10`
   ///
@@ -213,6 +220,8 @@ class HtDataApi<T> implements HtDataClient<T> {
     String? userId,
     String? startAfterId,
     int? limit,
+    String? sortBy,
+    SortOrder? sortOrder,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
     // Process the input query map for list-to-string conversion and 'query' to 'q' renaming
@@ -233,6 +242,8 @@ class HtDataApi<T> implements HtDataClient<T> {
       ...processedQueryInput,
       if (startAfterId != null) 'startAfterId': startAfterId,
       if (limit != null) 'limit': limit,
+      if (sortBy != null) 'sortBy': sortBy,
+      if (sortOrder != null) 'sortOrder': sortOrder.name,
     };
     final responseData = await _httpClient.get<Map<String, dynamic>>(
       _basePath,

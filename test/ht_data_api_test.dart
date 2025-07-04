@@ -73,6 +73,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue({});
     registerFallbackValue('');
+    registerFallbackValue(SortOrder.asc);
   });
 
   group('HtDataApi', () {
@@ -87,6 +88,8 @@ void main() {
     const testModel = _TestModel(id: testId, name: 'Test Name');
     final testModelJson = _TestModel.toJson(testModel);
     final testModelList = [testModel];
+    const mockSortBy = 'name';
+    const mockSortOrder = SortOrder.desc;
     final testModelListJson = [testModelJson];
     final genericException = Exception('Something unexpected happened');
 
@@ -506,7 +509,7 @@ void main() {
 
       // New test for pagination parameters
       test(
-        'should call httpClient.get with model and pagination query and return list '
+        'should call httpClient.get with model, pagination, and sorting query and return list '
         'on success',
         () async {
           const startAfterId = 'item-100';
@@ -515,6 +518,8 @@ void main() {
             ...baseQueryParams, // Include base model query
             'startAfterId': startAfterId,
             'limit': limit,
+            'sortBy': mockSortBy,
+            'sortOrder': mockSortOrder.name,
           };
           stubGetAllSuccess(
             items: testModelListJson,
@@ -524,6 +529,8 @@ void main() {
           final result = await htDataApi.readAll(
             startAfterId: startAfterId,
             limit: limit,
+            sortBy: mockSortBy,
+            sortOrder: mockSortOrder,
           );
           expect(
             result,
@@ -541,7 +548,7 @@ void main() {
       );
 
       test(
-        'should call httpClient.get with userId and pagination query and return list '
+        'should call httpClient.get with userId, pagination, and sorting query and return list '
         'on success',
         () async {
           const startAfterId = 'item-100';
@@ -550,6 +557,8 @@ void main() {
             ...userScopedQueryParams, // Include user-scoped model query
             'startAfterId': startAfterId,
             'limit': limit,
+            'sortBy': mockSortBy,
+            'sortOrder': mockSortOrder.name,
           };
           stubGetAllSuccess(
             items: testModelListJson,
@@ -560,6 +569,8 @@ void main() {
             userId: testUserId,
             startAfterId: startAfterId,
             limit: limit,
+            sortBy: mockSortBy,
+            sortOrder: mockSortOrder,
           );
           expect(
             result,
@@ -707,6 +718,8 @@ void main() {
         ...combinedQuery,
         'startAfterId': testStartAfterId,
         'limit': testLimit,
+        'sortBy': mockSortBy,
+        'sortOrder': mockSortOrder.name,
       };
 
       final userScopedCombinedQuery = {
@@ -718,6 +731,8 @@ void main() {
         ...userScopedCombinedQuery,
         'startAfterId': testStartAfterId,
         'limit': testLimit,
+        'sortBy': mockSortBy,
+        'sortOrder': mockSortOrder.name,
       };
 
       // Helper for successful query returning enveloped paginated response
@@ -807,7 +822,7 @@ void main() {
       );
 
       test(
-        'should call httpClient.get with combined query and pagination and return list '
+        'should call httpClient.get with combined query, pagination, and sorting and return list '
         'on success',
         () async {
           stubGetByQuerySuccess(
@@ -820,6 +835,8 @@ void main() {
             testUserQuery, // Pass user query
             startAfterId: testStartAfterId,
             limit: testLimit,
+            sortBy: mockSortBy,
+            sortOrder: mockSortOrder,
           );
           expect(
             result,
@@ -837,7 +854,7 @@ void main() {
         },
       );
 
-      test('should call httpClient.get with userId, combined query and pagination and return list '
+      test('should call httpClient.get with userId, combined query, pagination, and sorting and return list '
           'on success', () async {
         stubGetByQuerySuccess(
           items: testModelListJson,
@@ -850,6 +867,8 @@ void main() {
           userId: testUserId,
           startAfterId: testStartAfterId,
           limit: testLimit,
+          sortBy: mockSortBy,
+          sortOrder: mockSortOrder,
         );
         expect(
           result,

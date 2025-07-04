@@ -32,6 +32,7 @@ Then run `dart pub get` or `flutter pub get`.
 *   Implements `delete` returning `Future<void>`.
 *   Requires an instance of `HtHttpClient` for making HTTP requests.
 *   Configurable with the `modelName` (identifying the resource) and `fromJson`/`toJson` functions for the specific model `T`.
+*   Supports pagination (`startAfterId`, `limit`) and sorting (`sortBy`, `sortOrder`) parameters.
 *   Propagates `HtHttpException` errors from the underlying `HtHttpClient`.
 *   Includes comprehensive unit tests with 100% coverage.
 
@@ -135,6 +136,14 @@ Then run `dart pub get` or `flutter pub get`.
       );
       print('Found ${readAllPaginatedUser.data.items.length} models (Paginated User $userId).');
 
+      // Example: Read all items with sorting for a specific user
+      final readAllSortedUser = await myModelApi.readAll(
+        userId: userId,
+        sortBy: 'name',
+        sortOrder: SortOrder.desc,
+      );
+      print('Found ${readAllSortedUser.data.items.length} sorted models (User $userId).');
+
 
       // Read All by Query
       final query = {
@@ -159,6 +168,17 @@ Then run `dart pub get` or `flutter pub get`.
       if (queryResultsUser.isNotEmpty) {
         print('First query result (User $userId): ${queryResultsUser.first.name}');
       }
+
+      // Example: Read all by query with sorting for a specific user
+      final querySortedResponseUser = await myModelApi.readAllByQuery(
+        query,
+        userId: userId,
+        sortBy: 'name',
+        sortOrder: SortOrder.asc,
+      );
+      final querySortedResultsUser = querySortedResponseUser.data.items;
+      print('Found ${querySortedResultsUser.length} sorted models matching query (User $userId).');
+
 
       // Read One
       if (allModelsGlobal.isNotEmpty) {
