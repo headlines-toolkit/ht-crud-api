@@ -4,11 +4,15 @@
 import 'package:ht_data_api/ht_data_api.dart';
 import 'package:ht_http_client/ht_http_client.dart';
 import 'package:ht_shared/ht_shared.dart';
+import 'package:logging/logging.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 // --- Mock HttpClient ---
 class MockHtHttpClient extends Mock implements HtHttpClient {}
+
+// --- Mock Logger ---
+class MockLogger extends Mock implements Logger {}
 
 const testUserId = 'user-456'; // Added test user ID
 
@@ -74,10 +78,12 @@ void main() {
     registerFallbackValue({});
     registerFallbackValue('');
     registerFallbackValue(SortOrder.asc);
+    registerFallbackValue(MockLogger()); // Register MockLogger as fallback
   });
 
   group('HtDataApi', () {
     late HtHttpClient mockHttpClient;
+    late MockLogger mockLogger; // Declare mockLogger
     late HtDataApi<_TestModel> htDataApi;
     late HtDataApi<_TestModel> htDataApiFromJsonThrows;
     late HtDataApi<_TestModel> htDataApiToJsonThrows;
@@ -108,23 +114,27 @@ void main() {
 
     setUp(() {
       mockHttpClient = MockHtHttpClient();
+      mockLogger = MockLogger(); // Initialize mockLogger
       htDataApi = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
-        modelName: testModelName, // Added modelName
+        modelName: testModelName,
         fromJson: _TestModel.fromJson,
         toJson: _TestModel.toJson,
+        logger: mockLogger, // Pass mockLogger
       );
       htDataApiFromJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
-        modelName: testModelName, // Added modelName
+        modelName: testModelName,
         fromJson: _mockFromJsonThrows,
         toJson: _TestModel.toJson,
+        logger: mockLogger, // Pass mockLogger
       );
       htDataApiToJsonThrows = HtDataApi<_TestModel>(
         httpClient: mockHttpClient,
-        modelName: testModelName, // Added modelName
+        modelName: testModelName,
         fromJson: _TestModel.fromJson,
         toJson: _mockToJsonThrows,
+        logger: mockLogger, // Pass mockLogger
       );
     });
 

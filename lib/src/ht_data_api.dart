@@ -67,7 +67,9 @@ class HtDataApi<T> implements HtDataClient<T> {
     required T item,
     String? userId,
   }) async {
-    _logger.info('Creating item: $item with userId: $userId'); // Log the creation attempt
+    _logger.info(
+      'Creating item: $item with userId: $userId',
+    ); // Log the creation attempt
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
@@ -110,7 +112,9 @@ class HtDataApi<T> implements HtDataClient<T> {
     required String id,
     String? userId,
   }) async {
-    _logger.info('Reading item with id: $id and userId: $userId'); // Log the read attempt
+    _logger.info(
+      'Reading item with id: $id and userId: $userId',
+    ); // Log the read attempt
     // Exceptions from _httpClient or _fromJson are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
@@ -161,7 +165,9 @@ class HtDataApi<T> implements HtDataClient<T> {
     String? sortBy,
     SortOrder? sortOrder,
   }) async {
-    _logger.info('Reading all items with userId: $userId, startAfterId: $startAfterId, limit: $limit, sortBy: $sortBy, sortOrder: $sortOrder'); // Log the readAll attempt
+    _logger.info(
+      'Reading all items with userId: $userId, startAfterId: $startAfterId, limit: $limit, sortBy: $sortBy, sortOrder: $sortOrder',
+    ); // Log the readAll attempt
     // Exceptions from _httpClient are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
@@ -234,7 +240,9 @@ class HtDataApi<T> implements HtDataClient<T> {
     String? sortBy,
     SortOrder? sortOrder,
   }) async {
-    _logger.info('Reading all items by query: $query with userId: $userId, startAfterId: $startAfterId, limit: $limit, sortBy: $sortBy, sortOrder: $sortOrder'); // Log the readAllByQuery attempt
+    _logger.info(
+      'Reading all items by query: $query with userId: $userId, startAfterId: $startAfterId, limit: $limit, sortBy: $sortBy, sortOrder: $sortOrder',
+    ); // Log the readAllByQuery attempt
     // Exceptions from _httpClient are allowed to propagate.
     // Process the input query map to handle list values by converting them to
     // comma-separated strings, which is a common pattern for URL query params.
@@ -258,7 +266,9 @@ class HtDataApi<T> implements HtDataClient<T> {
       _basePath,
       queryParameters: queryParameters,
     );
-    _logger.fine('Read all items by query response: $responseData'); // Log the response
+    _logger.fine(
+      'Read all items by query response: $responseData',
+    ); // Log the response
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => PaginatedResponse.fromJson(json! as Map<String, dynamic>, (
@@ -306,7 +316,9 @@ class HtDataApi<T> implements HtDataClient<T> {
     required T item,
     String? userId,
   }) async {
-    _logger.info('Updating item with id: $id and userId: $userId with item: $item'); // Log the update attempt
+    _logger.info(
+      'Updating item with id: $id and userId: $userId with item: $item',
+    ); // Log the update attempt
     // Exceptions from _httpClient or _fromJson/_toJson are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
@@ -346,7 +358,9 @@ class HtDataApi<T> implements HtDataClient<T> {
   /// handled by the caller.
   @override
   Future<void> delete({required String id, String? userId}) async {
-    _logger.info('Deleting item with id: $id and userId: $userId'); // Log the delete attempt
+    _logger.info(
+      'Deleting item with id: $id and userId: $userId',
+    ); // Log the delete attempt
     // Exceptions from _httpClient are allowed to propagate.
     // We expect no content, but use <dynamic> for flexibility.
     final queryParameters = <String, dynamic>{
