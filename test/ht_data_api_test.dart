@@ -1015,6 +1015,58 @@ void main() {
           ).called(1);
         },
       );
+
+      test(
+        'should correctly convert list values in query to comma-separated strings',
+        () async {
+          final queryWithList = {
+            'ids': ['id1', 'id2', 'id3'],
+          };
+          final expectedQueryParameters = {
+            ...baseQueryParams,
+            'ids': 'id1,id2,id3',
+          };
+
+          stubGetByQuerySuccess(
+            items: testModelListJson,
+            queryParameters: expectedQueryParameters,
+          );
+
+          await htDataApi.readAllByQuery(queryWithList);
+
+          verify(
+            () => mockHttpClient.get<Map<String, dynamic>>(
+              testBasePath,
+              queryParameters: expectedQueryParameters,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'should pass through a generic "searchQuery" key without transformation',
+        () async {
+          final searchQuery = {'searchQuery': 'find me'};
+          final expectedQueryParameters = {
+            ...baseQueryParams,
+            ...searchQuery,
+          };
+
+          stubGetByQuerySuccess(
+            items: [], // No items needed, just verifying the call
+            queryParameters: expectedQueryParameters,
+          );
+
+          await htDataApi.readAllByQuery(searchQuery);
+
+          verify(
+            () => mockHttpClient.get<Map<String, dynamic>>(
+              testBasePath,
+              queryParameters: expectedQueryParameters,
+            ),
+          ).called(1);
+        },
+      );
     });
 
     // --- Update Tests ---
