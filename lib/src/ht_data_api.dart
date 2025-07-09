@@ -224,22 +224,19 @@ class HtDataApi<T> implements HtDataClient<T> {
     SortOrder? sortOrder,
   }) async {
     // Exceptions from _httpClient are allowed to propagate.
-    // Process the input query map for list-to-string conversion and 'query' to 'q' renaming
-    final processedQueryInput = <String, dynamic>{};
-    for (final entry in query.entries) {
-      final key = entry.key == 'query' ? 'q' : entry.key;
-      final value = entry.value;
+    // Process the input query map to handle list values by converting them to
+    // comma-separated strings, which is a common pattern for URL query params.
+    final processedQuery = query.map((key, value) {
       if (value is List) {
-        processedQueryInput[key] = value.map((e) => e.toString()).join(',');
-      } else {
-        processedQueryInput[key] = value;
+        return MapEntry(key, value.map((e) => e.toString()).join(','));
       }
-    }
+      return MapEntry(key, value);
+    });
 
     final queryParameters = <String, dynamic>{
       'model': _modelName,
       if (userId != null) 'userId': userId,
-      ...processedQueryInput,
+      ...processedQuery,
       if (startAfterId != null) 'startAfterId': startAfterId,
       if (limit != null) 'limit': limit,
       if (sortBy != null) 'sortBy': sortBy,
