@@ -28,12 +28,13 @@ Then run `dart pub get` or `flutter pub get`.
 
 *   Provides a concrete implementation of the `HtDataClient<T>` abstract class.
 *   Implements data access methods (`create`, `read`, `update`) returning `Future<SuccessApiResponse<T>>`.
-*   Implements list retrieval methods (`readAll`, `readAllByQuery`) returning `Future<SuccessApiResponse<PaginatedResponse<T>>>`.
+*   Implements a unified `readAll` method returning `Future<SuccessApiResponse<PaginatedResponse<T>>>`.
 *   Implements `delete` returning `Future<void>`.
 *   Requires an instance of `HtHttpClient` for making HTTP requests.
 *   Configurable with the `modelName` (identifying the resource) and `fromJson`/`toJson` functions for the specific model `T`.
-*   Supports pagination (`startAfterId`, `limit`) and sorting (`sortBy`, `sortOrder`) parameters.
+*   Supports rich, document-style querying (`filter`), multi-field sorting (`sort`), and cursor-based pagination (`pagination`).
 *   Propagates `HtHttpException` errors from the underlying `HtHttpClient`.
+*   Serializes complex query objects (`filter`, `sort`) into URL parameters for transport.
 *   Includes comprehensive unit tests with 100% coverage.
 
 ## Usage
@@ -108,95 +109,30 @@ Then run `dart pub get` or `flutter pub get`.
       final createdModelUser = createResponseUser.data; // Access data from envelope
       print('Created (User $userId): ${createdModelUser.id}');
 
-      // Read All
-      // Example: Read all items (global)
-      final readAllResponseGlobal = await myModelApi.readAll();
-      final allModelsGlobal = readAllResponseGlobal.data.items; // Access items from paginated data
-      print('Found ${allModelsGlobal.length} models (Global).');
-      print('Has more (Global): ${readAllResponseGlobal.data.hasMore}');
+      // Read All with filtering, sorting, and pagination
+      final filter = {'status': 'published', 'category': 'tech'};
+      final sort = [SortOption('publishDate', SortOrder.desc)];
+      final pagination = PaginationOptions(limit: 10);
 
-      // Example: Read all items for a specific user
-      final readAllResponseUser = await myModelApi.readAll(userId: userId);
-      final allModelsUser = readAllResponseUser.data.items; // Access items from paginated data
-      print('Found ${allModelsUser.length} models (User $userId).');
-      print('Has more (User $userId): ${readAllResponseUser.data.hasMore}');
-
-      // Example: Read all items with pagination (global)
-      final readAllPaginatedGlobal = await myModelApi.readAll(
-        startAfterId: 'last-item-id', // Replace with actual last item ID
-        limit: 10,
-      );
-      print('Found ${readAllPaginatedGlobal.data.items.length} models (Paginated Global).');
-
-      // Example: Read all items with pagination for a specific user
-      final readAllPaginatedUser = await myModelApi.readAll(
+      final readAllResponse = await myModelApi.readAll(
         userId: userId,
-        startAfterId: 'last-item-id', // Replace with actual last item ID
-        limit: 10,
+        filter: filter,
+        sort: sort,
+        pagination: pagination,
       );
-      print('Found ${readAllPaginatedUser.data.items.length} models (Paginated User $userId).');
-
-      // Example: Read all items with sorting for a specific user
-      final readAllSortedUser = await myModelApi.readAll(
-        userId: userId,
-        sortBy: 'name',
-        sortOrder: SortOrder.desc,
-      );
-      print('Found ${readAllSortedUser.data.items.length} sorted models (User $userId).');
-
-
-      // Read All by Query
-      final query = {
-        'name': 'New Item',
-        'limit': 1,
-      };
-      // Example: Read all by query (global)
-      final queryResponseGlobal = await myModelApi.readAllByQuery(query);
-      final queryResultsGlobal = queryResponseGlobal.data.items; // Access items
-      print('Found ${queryResultsGlobal.length} models matching query (Global).');
-      if (queryResultsGlobal.isNotEmpty) {
-        print('First query result (Global): ${queryResultsGlobal.first.name}');
+      final paginatedModels = readAllResponse.data;
+      print('Found ${paginatedModels.items.length} models matching query.');
+      if (paginatedModels.hasMore) {
+        print('More items available. Next cursor: ${paginatedModels.cursor}');
       }
-
-      // Example: Read all by query for a specific user
-      final queryResponseUser = await myModelApi.readAllByQuery(
-        query,
-        userId: userId,
-      );
-      final queryResultsUser = queryResponseUser.data.items; // Access items
-      print('Found ${queryResultsUser.length} models matching query (User $userId).');
-      if (queryResultsUser.isNotEmpty) {
-        print('First query result (User $userId): ${queryResultsUser.first.name}');
-      }
-
-      // Example: Read all by query with sorting for a specific user
-      final querySortedResponseUser = await myModelApi.readAllByQuery(
-        query,
-        userId: userId,
-        sortBy: 'name',
-        sortOrder: SortOrder.asc,
-      );
-      final querySortedResultsUser = querySortedResponseUser.data.items;
-      print('Found ${querySortedResultsUser.length} sorted models matching query (User $userId).');
-
 
       // Read One
-      if (allModelsGlobal.isNotEmpty) {
-        final firstModelId = allModelsGlobal.first.id;
+      if (paginatedModels.items.isNotEmpty) {
+        final firstModelId = paginatedModels.items.first.id;
         // Example: Read one item by ID (global)
         final readResponseGlobal = await myModelApi.read(id: firstModelId);
         final fetchedModelGlobal = readResponseGlobal.data; // Access data from envelope
         print('Fetched (Global): ${fetchedModelGlobal.name}');
-
-        // Example: Read one item by ID for a specific user
-        // (Assuming the user has an item with this ID)
-        final readResponseUser = await myModelApi.read(
-          id: firstModelId,
-          userId: userId,
-        );
-        final fetchedModelUser = readResponseUser.data; // Access data from envelope
-        print('Fetched (User $userId): ${fetchedModelUser.name}');
-
 
         // Update
         final updatedData = MyModel(id: firstModelId, name: 'Updated Name');
@@ -207,17 +143,6 @@ Then run `dart pub get` or `flutter pub get`.
         );
         final updatedModelGlobal = updateResponseGlobal.data; // Access data from envelope
         print('Updated (Global): ${updatedModelGlobal.name}');
-
-        // Example: Update an item for a specific user
-        // (Assuming the user has an item with this ID)
-        final updateResponseUser = await myModelApi.update(
-          id: firstModelId,
-          item: updatedData,
-          userId: userId,
-        );
-        final updatedModelUser = updateResponseUser.data; // Access data from envelope
-        print('Updated (User $userId): ${updatedModelUser.name}');
-
 
         // Delete (no change in return type)
         // Example: Delete an item (global)
