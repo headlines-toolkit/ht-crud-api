@@ -108,9 +108,9 @@ void main() {
 
     // Pre-create enveloped responses for convenience
     final successEnvelopeSingle = _createSuccessEnvelope(testModelJson);
-    final successEnvelopePaginated = _createSuccessEnvelope(
-      _createPaginatedResponseMap(testModelListJson),
-    );
+    // final successEnvelopePaginated = _createSuccessEnvelope(
+    //   _createPaginatedResponseMap(testModelListJson),
+    // );
 
     setUp(() {
       mockHttpClient = MockHtHttpClient();
@@ -524,8 +524,10 @@ void main() {
         () async {
           const cursor = 'item-100';
           const limit = 10;
-          const paginationOptions =
-              PaginationOptions(cursor: cursor, limit: limit);
+          const paginationOptions = PaginationOptions(
+            cursor: cursor,
+            limit: limit,
+          );
           final sortOptions = [const SortOption(mockSortBy, mockSortOrder)];
           final queryParams = <String, dynamic>{
             ...baseQueryParams,
@@ -592,8 +594,10 @@ void main() {
         () async {
           const cursor = 'item-100';
           const limit = 10;
-          const paginationOptions =
-              PaginationOptions(cursor: cursor, limit: limit);
+          const paginationOptions = PaginationOptions(
+            cursor: cursor,
+            limit: limit,
+          );
           final sortOptions = [const SortOption(mockSortBy, mockSortOrder)];
           final queryParams = <String, dynamic>{
             ...userScopedQueryParams,
@@ -745,7 +749,6 @@ void main() {
         },
       );
     });
-
 
     // --- Update Tests ---
     group('update', () {
