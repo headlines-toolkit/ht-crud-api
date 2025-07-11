@@ -558,6 +558,35 @@ void main() {
       );
 
       test(
+        'should call httpClient.get with filter and return list on success',
+        () async {
+          final filter = {'status': 'active', 'tags': 'tech'};
+          final queryParams = <String, dynamic>{
+            ...baseQueryParams,
+            'filter': '{"status":"active","tags":"tech"}',
+          };
+          stubGetAllSuccess(
+            items: testModelListJson,
+            queryParameters: queryParams,
+          );
+
+          final result = await htDataApi.readAll(filter: filter);
+
+          expect(
+            result,
+            isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
+          );
+          expect(result.data.items, equals(testModelList));
+          verify(
+            () => mockHttpClient.get<Map<String, dynamic>>(
+              testBasePath,
+              queryParameters: queryParams,
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
         'should call httpClient.get with userId, pagination, and sorting query and return list '
         'on success',
         () async {
