@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:ht_data_client/ht_data_client.dart';
 import 'package:ht_http_client/ht_http_client.dart';
 import 'package:ht_shared/ht_shared.dart';
@@ -131,144 +132,56 @@ class HtDataApi<T> implements HtDataClient<T> {
     );
   }
 
-  /// Reads all resource items of type [T], supporting pagination.
+  /// Reads multiple resource items of type [T], with support for rich filtering,
+  /// sorting, and pagination.
   ///
-  /// - [userId]: The unique identifier of the user performing the operation.
-  ///   If `null`, the operation should retrieve all *global* resources of type [T].
-  ///   If provided, the operation should retrieve all resources scoped to that user.
-  ///   Implementations must handle the `null` case.
-  /// - [startAfterId]: Optional ID to start pagination after.
-  /// - [limit]: Optional maximum number of items to return.
-  /// - [sortBy]: Optional field name to sort the results by.
-  /// - [sortOrder]: Optional direction for sorting (`asc` or `desc`).
+  /// - [userId]: The unique identifier of the user. If `null`, retrieves
+  ///   *global* resources. If provided, retrieves resources scoped to that user.
+  /// - [filter]: An optional map defining the query conditions. It is designed
+  ///   to be compatible with MongoDB's query syntax. If `null` or empty, all
+  ///   resources (scoped by `userId`) are returned.
+  /// - [pagination]: Optional pagination parameters, including `cursor` and `limit`.
+  /// - [sort]: An optional list of [SortOption] to define the sorting order.
+  ///   MongoDB supports sorting by multiple fields.
   ///
   /// Sends a GET request to the unified API endpoint `[_basePath]` with the
   /// `model` query parameter set to [_modelName]. Includes the `userId` query
   /// parameter if provided, and optional pagination and sorting parameters.
   ///
-  /// Example Request (user-scoped, first page): `GET /api/v1/data?model=source&userId=user123&limit=20`
-  /// Example Request (global, sorted): `GET /api/v1/data?model=source&sortBy=name&sortOrder=asc`
+  /// Example Request (user-scoped, with filter):
+  /// `GET /api/v1/data?model=headline&userId=user123&filter={"status":"published"}`
   ///
   /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
   /// list of deserialized items and pagination details.
   ///
   /// Throws [HtHttpException] or its subtypes on underlying HTTP communication
-  /// failure. Can also throw [FormatException] if the received data structure
-  /// is incorrect (e.g., list item is not a Map) or other exceptions during
-  /// deserialization ([_fromJson]). These exceptions are intended to be handled
-  /// by the caller.
+  /// failure.
   @override
   Future<SuccessApiResponse<PaginatedResponse<T>>> readAll({
     String? userId,
-    String? startAfterId,
-    int? limit,
-    String? sortBy,
-    SortOrder? sortOrder,
+    Map<String, dynamic>? filter,
+    PaginationOptions? pagination,
+    List<SortOption>? sort,
   }) async {
     _logger.info(
-      'Reading all items with userId: $userId, startAfterId: $startAfterId, limit: $limit, sortBy: $sortBy, sortOrder: $sortOrder',
-    ); // Log the readAll attempt
+      'Reading all items with userId: $userId, filter: $filter, '
+      'pagination: ${pagination?.props}, sort: ${sort?.map((s) => s.props)}',
+    );
     // Exceptions from _httpClient are allowed to propagate.
     final queryParameters = <String, dynamic>{
       'model': _modelName,
       if (userId != null) 'userId': userId,
-      if (startAfterId != null) 'startAfterId': startAfterId,
-      if (limit != null) 'limit': limit,
-      if (sortBy != null) 'sortBy': sortBy,
-      if (sortOrder != null) 'sortOrder': sortOrder.name,
+      if (pagination?.cursor != null) 'cursor': pagination!.cursor,
+      if (pagination?.limit != null) 'limit': pagination!.limit.toString(),
+      if (filter != null && filter.isNotEmpty) 'filter': jsonEncode(filter),
+      if (sort != null && sort.isNotEmpty)
+        'sort': sort.map((s) => '${s.field}:${s.order.name}').join(','),
     };
     final responseData = await _httpClient.get<Map<String, dynamic>>(
       _basePath,
       queryParameters: queryParameters,
     );
     _logger.fine('Read all items response: $responseData'); // Log the response
-    return SuccessApiResponse.fromJson(
-      responseData,
-      (json) => PaginatedResponse.fromJson(json! as Map<String, dynamic>, (
-        itemJson,
-      ) {
-        // Add type check for robustness against malformed API responses
-        if (itemJson is Map<String, dynamic>) {
-          return _fromJson(itemJson);
-        } else {
-          throw FormatException(
-            'Expected Map<String, dynamic> in paginated list but got ${itemJson?.runtimeType}',
-            itemJson,
-          );
-        }
-      }),
-    );
-  }
-
-  /// Reads multiple resource items of type [T] based on a [query], supporting
-  /// pagination.
-  ///
-  /// - [userId]: The unique identifier of the user performing the operation.
-  ///   If `null`, the operation should retrieve *global* resources matching the
-  ///   query. If provided, the operation should retrieve resources scoped to
-  ///   that user matching the query. Implementations must handle the `null` case.
-  /// - [query]: Map of query parameters to filter results.
-  /// - [startAfterId]: Optional ID to start pagination after.
-  /// - [limit]: Optional maximum number of items to return.
-  /// - [sortBy]: Optional field name to sort the results by.
-  /// - [sortOrder]: Optional direction for sorting (`asc` or `desc`).
-  ///
-  /// Sends a GET request to the unified API endpoint `[_basePath]` with the
-  /// `model` query parameter set to [_modelName], the provided [query] map,
-  /// and optional pagination and sorting parameters. Includes the `userId`
-  /// query parameter if provided.
-  ///
-  /// Example Request (user-scoped):
-  /// `GET /api/v1/data?model=headline&userId=user123&category=tech&sortBy=publishedAt&sortOrder=desc`
-  /// Example Request (global):
-  /// `GET /api/v1/data?model=headline&category=tech&country=US&limit=10`
-  ///
-  /// Returns a [SuccessApiResponse] containing a [PaginatedResponse] with the
-  /// list of deserialized items matching the query and pagination details.
-  ///
-  /// Throws [HtHttpException] or its subtypes (e.g., [BadRequestException] for
-  /// invalid query parameters) on underlying HTTP communication failure. Can
-  /// also throw [FormatException] if the received data structure is incorrect
-  /// or other exceptions during deserialization ([_fromJson]). These exceptions
-  /// are intended to be handled by the caller.
-  @override
-  Future<SuccessApiResponse<PaginatedResponse<T>>> readAllByQuery(
-    Map<String, dynamic> query, {
-    String? userId,
-    String? startAfterId,
-    int? limit,
-    String? sortBy,
-    SortOrder? sortOrder,
-  }) async {
-    _logger.info(
-      'Reading all items by query: $query with userId: $userId, startAfterId: $startAfterId, limit: $limit, sortBy: $sortBy, sortOrder: $sortOrder',
-    ); // Log the readAllByQuery attempt
-    // Exceptions from _httpClient are allowed to propagate.
-    // Process the input query map to handle list values by converting them to
-    // comma-separated strings, which is a common pattern for URL query params.
-    final processedQuery = query.map((key, value) {
-      if (value is List) {
-        return MapEntry(key, value.map((e) => e.toString()).join(','));
-      }
-      return MapEntry(key, value);
-    });
-
-    final queryParameters = <String, dynamic>{
-      'model': _modelName,
-      if (userId != null) 'userId': userId,
-      ...processedQuery,
-      if (startAfterId != null) 'startAfterId': startAfterId,
-      if (limit != null) 'limit': limit,
-      if (sortBy != null) 'sortBy': sortBy,
-      if (sortOrder != null) 'sortOrder': sortOrder.name,
-    };
-    final responseData = await _httpClient.get<Map<String, dynamic>>(
-      _basePath,
-      queryParameters: queryParameters,
-    );
-    _logger.fine(
-      'Read all items by query response: $responseData',
-    ); // Log the response
     return SuccessApiResponse.fromJson(
       responseData,
       (json) => PaginatedResponse.fromJson(json! as Map<String, dynamic>, (
