@@ -522,14 +522,14 @@ void main() {
         'should call httpClient.get with model, pagination, and sorting query and return list '
         'on success',
         () async {
-          const startAfterId = 'item-100';
+          const cursor = 'item-100';
           const limit = 10;
           const paginationOptions =
-              PaginationOptions(cursor: startAfterId, limit: limit);
+              PaginationOptions(cursor: cursor, limit: limit);
           final sortOptions = [const SortOption(mockSortBy, mockSortOrder)];
           final queryParams = <String, dynamic>{
             ...baseQueryParams,
-            'cursor': startAfterId,
+            'cursor': cursor,
             'limit': limit.toString(),
             'sort': '$mockSortBy:${mockSortOrder.name}',
           };
@@ -590,14 +590,14 @@ void main() {
         'should call httpClient.get with userId, pagination, and sorting query and return list '
         'on success',
         () async {
-          const startAfterId = 'item-100';
+          const cursor = 'item-100';
           const limit = 10;
           const paginationOptions =
-              PaginationOptions(cursor: startAfterId, limit: limit);
+              PaginationOptions(cursor: cursor, limit: limit);
           final sortOptions = [const SortOption(mockSortBy, mockSortOrder)];
           final queryParams = <String, dynamic>{
             ...userScopedQueryParams,
-            'cursor': startAfterId,
+            'cursor': cursor,
             'limit': limit.toString(),
             'sort': '$mockSortBy:${mockSortOrder.name}',
           };
