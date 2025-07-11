@@ -79,6 +79,8 @@ void main() {
     registerFallbackValue('');
     registerFallbackValue(SortOrder.asc);
     registerFallbackValue(MockLogger()); // Register MockLogger as fallback
+    registerFallbackValue(const PaginationOptions()); // New
+    registerFallbackValue(const SortOption('')); // New
   });
 
   group('HtDataApi', () {
@@ -106,8 +108,6 @@ void main() {
 
     // Pre-create enveloped responses for convenience
     final successEnvelopeSingle = _createSuccessEnvelope(testModelJson);
-    //
-    // ignore: unused_local_variable
     final successEnvelopePaginated = _createSuccessEnvelope(
       _createPaginatedResponseMap(testModelListJson),
     );
@@ -524,12 +524,14 @@ void main() {
         () async {
           const startAfterId = 'item-100';
           const limit = 10;
-          final queryParams = {
-            ...baseQueryParams, // Include base model query
-            'startAfterId': startAfterId,
-            'limit': limit,
-            'sortBy': mockSortBy,
-            'sortOrder': mockSortOrder.name,
+          const paginationOptions =
+              PaginationOptions(cursor: startAfterId, limit: limit);
+          final sortOptions = [const SortOption(mockSortBy, mockSortOrder)];
+          final queryParams = <String, dynamic>{
+            ...baseQueryParams,
+            'cursor': startAfterId,
+            'limit': limit.toString(),
+            'sort': '$mockSortBy:${mockSortOrder.name}',
           };
           stubGetAllSuccess(
             items: testModelListJson,
@@ -537,10 +539,8 @@ void main() {
             hasMore: true,
           );
           final result = await htDataApi.readAll(
-            startAfterId: startAfterId,
-            limit: limit,
-            sortBy: mockSortBy,
-            sortOrder: mockSortOrder,
+            pagination: paginationOptions,
+            sort: sortOptions,
           );
           expect(
             result,
@@ -563,12 +563,14 @@ void main() {
         () async {
           const startAfterId = 'item-100';
           const limit = 10;
-          final queryParams = {
-            ...userScopedQueryParams, // Include user-scoped model query
-            'startAfterId': startAfterId,
-            'limit': limit,
-            'sortBy': mockSortBy,
-            'sortOrder': mockSortOrder.name,
+          const paginationOptions =
+              PaginationOptions(cursor: startAfterId, limit: limit);
+          final sortOptions = [const SortOption(mockSortBy, mockSortOrder)];
+          final queryParams = <String, dynamic>{
+            ...userScopedQueryParams,
+            'cursor': startAfterId,
+            'limit': limit.toString(),
+            'sort': '$mockSortBy:${mockSortOrder.name}',
           };
           stubGetAllSuccess(
             items: testModelListJson,
@@ -577,10 +579,8 @@ void main() {
           );
           final result = await htDataApi.readAll(
             userId: testUserId,
-            startAfterId: startAfterId,
-            limit: limit,
-            sortBy: mockSortBy,
-            sortOrder: mockSortOrder,
+            pagination: paginationOptions,
+            sort: sortOptions,
           );
           expect(
             result,
@@ -717,367 +717,6 @@ void main() {
       );
     });
 
-    // --- ReadAllByQuery Tests ---
-    group('readAllByQuery', () {
-      final baseQueryParams = {'model': testModelName}; // Base query
-      final testUserQuery = {'category': 'test', 'active': true};
-      const testStartAfterId = 'item-200';
-      const testLimit = 5;
-      final combinedQuery = {...baseQueryParams, ...testUserQuery};
-      final combinedQueryWithPagination = {
-        ...combinedQuery,
-        'startAfterId': testStartAfterId,
-        'limit': testLimit,
-        'sortBy': mockSortBy,
-        'sortOrder': mockSortOrder.name,
-      };
-
-      final userScopedCombinedQuery = {
-        ...baseQueryParams,
-        'userId': testUserId,
-        ...testUserQuery,
-      };
-      final userScopedCombinedQueryWithPagination = {
-        ...userScopedCombinedQuery,
-        'startAfterId': testStartAfterId,
-        'limit': testLimit,
-        'sortBy': mockSortBy,
-        'sortOrder': mockSortOrder.name,
-      };
-
-      // Helper for successful query returning enveloped paginated response
-      void stubGetByQuerySuccess({
-        required Map<String, dynamic> queryParameters,
-        List<dynamic> items = const [],
-        bool hasMore = false,
-        String? cursor,
-      }) {
-        final paginatedData = _createPaginatedResponseMap(
-          items,
-          hasMore: hasMore,
-          cursor: cursor,
-        );
-        final envelope = _createSuccessEnvelope(paginatedData);
-        when(
-          () => mockHttpClient.get<Map<String, dynamic>>(
-            testBasePath, // Use base path
-            queryParameters: queryParameters,
-          ),
-        ).thenAnswer((_) async => envelope);
-      }
-
-      // Helper for failed query, still expects Map
-      void stubGetByQueryFailure({
-        required Exception exception,
-        required Map<String, dynamic> queryParameters,
-      }) {
-        when(
-          () => mockHttpClient.get<Map<String, dynamic>>(
-            testBasePath, // Use base path
-            queryParameters: queryParameters,
-          ),
-        ).thenThrow(exception);
-      }
-
-      test('should call httpClient.get with combined query and return list '
-          'on success', () async {
-        stubGetByQuerySuccess(
-          items: testModelListJson,
-          queryParameters: combinedQuery, // Use combined query
-        );
-        final result = await htDataApi.readAllByQuery(
-          testUserQuery,
-        ); // Pass user query
-        expect(
-          result,
-          isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
-        );
-        expect(result.data.items, equals(testModelList));
-        expect(result.data.hasMore, isFalse);
-        verify(
-          () => mockHttpClient.get<Map<String, dynamic>>(
-            testBasePath, // Verify base path
-            queryParameters: combinedQuery, // Verify combined query
-          ),
-        ).called(1);
-      });
-
-      test(
-        'should call httpClient.get with userId and combined query and return list '
-        'on success',
-        () async {
-          stubGetByQuerySuccess(
-            items: testModelListJson,
-            queryParameters:
-                userScopedCombinedQuery, // Use user-scoped combined query
-          );
-          final result = await htDataApi.readAllByQuery(
-            testUserQuery,
-            userId: testUserId,
-          ); // Pass user query and userId
-          expect(
-            result,
-            isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
-          );
-          expect(result.data.items, equals(testModelList));
-          expect(result.data.hasMore, isFalse);
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Verify base path
-              queryParameters:
-                  userScopedCombinedQuery, // Verify user-scoped combined query
-            ),
-          ).called(1);
-        },
-      );
-
-      test(
-        'should call httpClient.get with combined query, pagination, and sorting and return list '
-        'on success',
-        () async {
-          stubGetByQuerySuccess(
-            items: testModelListJson,
-            queryParameters:
-                combinedQueryWithPagination, // Use combined+pagination
-            hasMore: true,
-          );
-          final result = await htDataApi.readAllByQuery(
-            testUserQuery, // Pass user query
-            startAfterId: testStartAfterId,
-            limit: testLimit,
-            sortBy: mockSortBy,
-            sortOrder: mockSortOrder,
-          );
-          expect(
-            result,
-            isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
-          );
-          expect(result.data.items, equals(testModelList));
-          expect(result.data.hasMore, isTrue);
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Verify base path
-              queryParameters:
-                  combinedQueryWithPagination, // Verify combined+pagination
-            ),
-          ).called(1);
-        },
-      );
-
-      test('should call httpClient.get with userId, combined query, pagination, and sorting and return list '
-          'on success', () async {
-        stubGetByQuerySuccess(
-          items: testModelListJson,
-          queryParameters:
-              userScopedCombinedQueryWithPagination, // Use user-scoped combined+pagination
-          hasMore: true,
-        );
-        final result = await htDataApi.readAllByQuery(
-          testUserQuery, // Pass user query
-          userId: testUserId,
-          startAfterId: testStartAfterId,
-          limit: testLimit,
-          sortBy: mockSortBy,
-          sortOrder: mockSortOrder,
-        );
-        expect(
-          result,
-          isA<SuccessApiResponse<PaginatedResponse<_TestModel>>>(),
-        );
-        expect(result.data.items, equals(testModelList));
-        expect(result.data.hasMore, isTrue);
-        verify(
-          () => mockHttpClient.get<Map<String, dynamic>>(
-            testBasePath, // Verify base path
-            queryParameters:
-                userScopedCombinedQueryWithPagination, // Verify user-scoped combined+pagination
-          ),
-        ).called(1);
-      });
-
-      test('should throw HtHttpException when httpClient.get fails', () async {
-        const exception = ServerException('Server error');
-        stubGetByQueryFailure(
-          exception: exception,
-          queryParameters: combinedQuery, // Use combined query
-        );
-        expect(
-          () => htDataApi.readAllByQuery(testUserQuery), // Pass user query
-          throwsA(isA<ServerException>()),
-        );
-        verify(
-          () => mockHttpClient.get<Map<String, dynamic>>(
-            testBasePath, // Verify base path
-            queryParameters: combinedQuery, // Verify combined query
-          ),
-        ).called(1);
-      });
-
-      test(
-        'should throw HtHttpException when httpClient.get fails with userId',
-        () async {
-          const exception = ServerException('Server error');
-          stubGetByQueryFailure(
-            exception: exception,
-            queryParameters:
-                userScopedCombinedQuery, // Use user-scoped combined query
-          );
-          expect(
-            () => htDataApi.readAllByQuery(
-              testUserQuery,
-              userId: testUserId,
-            ), // Pass user query and userId
-            throwsA(isA<ServerException>()),
-          );
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Verify base path
-              queryParameters:
-                  userScopedCombinedQuery, // Verify user-scoped combined query
-            ),
-          ).called(1);
-        },
-      );
-
-      test(
-        'should throw FormatException when list item is not a Map',
-        () async {
-          // Stub needs to return envelope with malformed paginated data inside
-          final malformedPaginatedData = _createPaginatedResponseMap([
-            testModelJson,
-            123,
-          ]);
-          final envelopeWithMalformedData = _createSuccessEnvelope(
-            malformedPaginatedData,
-          );
-          when(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Use base path
-              queryParameters: combinedQuery, // Use combined query
-            ),
-          ).thenAnswer((_) async => envelopeWithMalformedData);
-
-          expect(
-            () => htDataApi.readAllByQuery(testUserQuery), // Pass user query
-            throwsA(isA<FormatException>()),
-          );
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Verify base path
-              queryParameters: combinedQuery, // Verify combined query
-            ),
-          ).called(1);
-        },
-      );
-
-      test(
-        'should throw generic Exception when fromJson fails during mapping',
-        () async {
-          // Stub needs to return a valid envelope, failure happens in fromJson
-          stubGetByQuerySuccess(
-            items: testModelListJson,
-            queryParameters: combinedQuery, // Use combined query
-          );
-          expect(
-            () => htDataApiFromJsonThrows.readAllByQuery(
-              testUserQuery,
-            ), // Pass user query
-            throwsA(
-              isA<Exception>().having(
-                (e) => e.toString(),
-                'message',
-                'Exception: fromJson failed',
-              ),
-            ),
-          );
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Verify base path
-              queryParameters: combinedQuery, // Verify combined query
-            ),
-          ).called(1);
-        },
-      );
-
-      test(
-        'should throw generic Exception when httpClient throws generic error',
-        () async {
-          final exception = genericException;
-          stubGetByQueryFailure(
-            exception: exception,
-            queryParameters: combinedQuery, // Use combined query
-          );
-          expect(
-            () => htDataApi.readAllByQuery(testUserQuery), // Pass user query
-            throwsA(
-              isA<Exception>().having(
-                (e) => e.toString(),
-                'message',
-                'Exception: Something unexpected happened',
-              ),
-            ),
-          );
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath, // Verify base path
-              queryParameters: combinedQuery, // Verify combined query
-            ),
-          ).called(1);
-        },
-      );
-
-      test(
-        'should correctly convert list values in query to comma-separated strings',
-        () async {
-          final queryWithList = {
-            'ids': ['id1', 'id2', 'id3'],
-          };
-          final expectedQueryParameters = {
-            ...baseQueryParams,
-            'ids': 'id1,id2,id3',
-          };
-
-          stubGetByQuerySuccess(
-            items: testModelListJson,
-            queryParameters: expectedQueryParameters,
-          );
-
-          await htDataApi.readAllByQuery(queryWithList);
-
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath,
-              queryParameters: expectedQueryParameters,
-            ),
-          ).called(1);
-        },
-      );
-
-      test(
-        'should pass through a generic "searchQuery" key without transformation',
-        () async {
-          final searchQuery = {'searchQuery': 'find me'};
-          final expectedQueryParameters = {
-            ...baseQueryParams,
-            ...searchQuery,
-          };
-
-          stubGetByQuerySuccess(
-            items: [], // No items needed, just verifying the call
-            queryParameters: expectedQueryParameters,
-          );
-
-          await htDataApi.readAllByQuery(searchQuery);
-
-          verify(
-            () => mockHttpClient.get<Map<String, dynamic>>(
-              testBasePath,
-              queryParameters: expectedQueryParameters,
-            ),
-          ).called(1);
-        },
-      );
-    });
 
     // --- Update Tests ---
     group('update', () {
