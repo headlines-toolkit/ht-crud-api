@@ -286,4 +286,20 @@ class HtDataApi<T> implements HtDataClient<T> {
     );
     _logger.fine('Deleted item with id: $id'); // Log the deletion
   }
+
+  @override
+  Future<SuccessApiResponse<int>> count({
+    String? userId,
+    Map<String, dynamic>? filter,
+  }) async {
+    throw UnimplementedError('count has not been implemented');
+  }
+
+  @override
+  Future<SuccessApiResponse<List<Map<String, dynamic>>>> aggregate({
+    required List<Map<String, dynamic>> pipeline,
+    String? userId,
+  }) async {
+    throw UnimplementedError('aggregate has not been implemented');
+  }
 }
